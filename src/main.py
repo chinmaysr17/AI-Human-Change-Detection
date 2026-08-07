@@ -4,17 +4,23 @@ Main Entry Point
 """
 
 import config
+from preprocessing.image_loader import load_image
 
 
 def main():
+
     print("=" * 60)
     print(config.PROJECT_NAME)
     print("=" * 60)
-    print(f"Dataset Folder : {config.DATASET_PATH}")
-    print(f"Image Size     : {config.IMAGE_WIDTH} x {config.IMAGE_HEIGHT}")
-    print(f"Model          : {config.MODEL_NAME}")
-    print("=" * 60)
-    print("Project setup completed successfully!")
+
+    image_path = "dataset/sample.jpg"
+
+    image = load_image(image_path)
+
+    if image is None:
+        print("Please add a satellite image named 'sample.jpg' inside the dataset folder.")
+    else:
+        print("Image Ready for Preprocessing.")
 
 
 if __name__ == "__main__":
