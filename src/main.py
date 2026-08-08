@@ -2,9 +2,13 @@
 Main Entry Point
 """
 
-import os
+import numpy as np
 import config
-from preprocessing.image_loader import load_image
+
+from data.dataset_validator import validate_dataset
+from data.image_loader import load_image_pair
+from preprocessing.image_loader import preprocess_images
+from visualization.display_images import display_image_pair
 
 
 def main():
@@ -13,18 +17,65 @@ def main():
     print(config.PROJECT_NAME)
     print("=" * 60)
 
-    print("Dataset Directory")
-    print(config.DATASET_DIR)
-    print("=" * 60)
+    # Validate dataset
+    if not validate_dataset():
+        print("\n❌ Dataset validation failed.")
+        return
 
-    image_path = os.path.join(config.DATASET_DIR, "sample.jpg")
+    # Load first image pair
+    print("\nLoading first image pair...\n")
 
-    image = load_image(image_path)
+    image_a, image_b, label = load_image_pair("test_1.png")
 
-    if image is None:
-        print("\nWaiting for dataset...")
-    else:
-        print("Image Ready for Preprocessing")
+    if image_a is None:
+        print("\n❌ Failed to load image pair.")
+        return
+
+    print("\n✅ First LEVIR-CD image pair loaded successfully.")
+
+    print("Image A shape:", image_a.shape)
+    print("Image B shape:", image_b.shape)
+    print("Label shape  :", label.shape)
+
+    # Preprocess images
+    print("\nPreprocessing images...")
+
+    processed_a, processed_b, processed_label = preprocess_images(
+        image_a,
+        image_b,
+        label
+    )
+
+    print("✅ Preprocessing completed.")
+
+    print("Processed Image A shape:", processed_a.shape)
+    print("Processed Image B shape:", processed_b.shape)
+    print("Processed Label shape  :", processed_label.shape)
+
+    print(
+        "Image A pixel range:",
+        processed_a.min(),
+        "to",
+        processed_a.max()
+    )
+
+    print(
+        "Image B pixel range:",
+        processed_b.min(),
+        "to",
+        processed_b.max()
+    )
+
+    print("Label values:", np.unique(processed_label))
+
+    # Display preprocessed images
+    print("\nDisplaying preprocessed images...")
+
+    display_image_pair(
+        (processed_a * 255).astype(np.uint8),
+        (processed_b * 255).astype(np.uint8),
+        processed_label
+    )
 
 
 if __name__ == "__main__":

@@ -18,6 +18,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DATASET_DIR = os.path.join(BASE_DIR, "dataset")
 
+LEVIR_DATASET = os.path.join(DATASET_DIR, "LEVIR-CD")
+
+IMAGE_A_DIR = os.path.join(LEVIR_DATASET, "A")
+IMAGE_B_DIR = os.path.join(LEVIR_DATASET, "B")
+LABEL_DIR = os.path.join(LEVIR_DATASET, "label")
+
 # ==========================================================
 # Image Configuration
 # ==========================================================
