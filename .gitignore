@@ -2,11 +2,13 @@
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyd
 
 # Virtual Environment
 .venv/
 venv/
 env/
+ENV/
 
 # VS Code
 .vscode/
@@ -16,9 +18,24 @@ env/
 
 # Environment files
 .env
+.env.*
+!.env.example
 
 # OS files
 .DS_Store
 Thumbs.db
+
 # Dataset
 dataset/
+
+# Generated outputs
+/outputs/
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
