@@ -2,24 +2,26 @@
 
 ## Project Overview
 
-This project aims to develop an AI-based system for detecting human-induced changes from satellite images using deep learning techniques.
+This project develops an AI-based system for detecting human-induced changes from satellite image pairs using a Convolutional Neural Network (CNN).
 
-## Team Members
+The system takes two satellite images of the same geographical area captured at different times:
 
-(To be updated)
+- **Image A** - Earlier image
+- **Image B** - Later image
 
-## Guide
+The two images are preprocessed and combined to form a **6-channel input**:
 
-(To be updated)
-
-## Technologies
-
-- Python
-- TensorFlow
-- OpenCV
-- NumPy
-- Matplotlib
-
-## Status
-
-🟡 Project Setup in Progress
+```text
+Image A (3 channels)
+        +
+Image B (3 channels)
+        ↓
+6-Channel Input
+        ↓
+Final CNN Model
+        ↓
+Change Prediction
+        ↓
+Binary Change Map
+        ↓
+Change Visualization
