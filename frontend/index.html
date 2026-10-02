@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        AI Human-Induced Change Detection
+    </title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f4f7fb;
+            color: #1f2937;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1100px;
+            margin: 40px auto;
+        }
+
+        /* HEADER */
+
+        .header {
+            background: #1e3a8a;
+            color: white;
+            padding: 30px;
+            border-radius: 12px 12px 0 0;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 15px;
+            opacity: 0.9;
+        }
+
+        /* MAIN CARD */
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 0 0 12px 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        /* INPUT */
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+
+        /* BUTTON */
+
+        .analyze-button {
+            width: 100%;
+            padding: 13px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .analyze-button:hover {
+            background: #1d4ed8;
+        }
+
+        .analyze-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* STATUS */
+
+        .status {
+            margin-top: 20px;
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .status.loading {
+            display: block;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .status.error {
+            display: block;
+            background: #fef2f2;
+            color: #b91c1c;
+        }
+
+        /* RESULTS */
+
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .results h2 {
+            margin-bottom: 20px;
+        }
+
+        /* STATISTICS */
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .result-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .result-box .label {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .result-box .value {
+            font-size: 22px;
+            font-weight: bold;
+            color: #1e3a8a;
+        }
+
+        .change-percentage {
+            grid-column: span 2;
+            text-align: center;
+            background: #eff6ff;
+        }
+
+        .change-percentage .value {
+            font-size: 36px;
+        }
+
+        /* BEFORE / AFTER */
+
+        .image-section {
+            margin-top: 35px;
+        }
+
+        .image-section h2 {
+            margin-bottom: 15px;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .image-card {
+            background: #111827;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .image-card h3 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 17px;
+        }
+
+        .image-card img {
+            width: 100%;
+            display: block;
+            border-radius: 6px;
+            background: black;
+        }
+
+        /* CHANGE MAP */
+
+        .change-map-section {
+            margin-top: 35px;
+        }
+
+        .change-map-section h2 {
+            margin-bottom: 15px;
+        }
+
+        .change-map-container {
+            background: #111827;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .change-map-container img {
+            width: 100%;
+            max-width: 700px;
+            height: auto;
+            display: block;
+            margin: auto;
+            border-radius: 6px;
+        }
+
+        .map-legend {
+            margin-top: 12px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .legend-box {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            background: white;
+            margin-right: 6px;
+            vertical-align: middle;
+            border-radius: 2px;
+        }
+
+        /* OVERLAY */
+
+        .overlay-section {
+            margin-top: 35px;
+        }
+
+        .overlay-section h2 {
+            margin-bottom: 10px;
+        }
+
+        .overlay-description {
+            color: #64748b;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .overlay-container {
+            background: #111827;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .overlay-container img {
+            width: 100%;
+            max-width: 900px;
+            height: auto;
+            display: block;
+            margin: auto;
+            border-radius: 6px;
+        }
+
+        .overlay-legend {
+            margin-top: 12px;
+            color: white;
+            font-size: 14px;
+        }
+
+        .red-legend {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            background: red;
+            margin-right: 6px;
+            vertical-align: middle;
+            border-radius: 2px;
+        }
+
+        /* RESPONSIVE */
+
+        @media (max-width: 700px) {
+
+            .container {
+                width: 95%;
+                margin: 20px auto;
+            }
+
+            .header {
+                padding: 20px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .result-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .change-percentage {
+                grid-column: span 1;
+            }
+
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <h1>
+            AI Human-Induced Change Detection
+        </h1>
+
+        <p>
+            Analyze satellite image pairs using
+            Artificial Intelligence
+        </p>
+
+    </div>
+
+
+    <div class="card">
+
+
+        <!-- INPUT -->
+
+        <div class="input-group">
+
+            <label for="filename">
+                Satellite Image Filename
+            </label>
+
+            <input
+                type="text"
+                id="filename"
+                value="test_1.png"
+                placeholder="Example: test_1.png"
+            >
+
+        </div>
+
+
+        <!-- BUTTON -->
+
+        <button
+            class="analyze-button"
+            id="analyzeButton"
+            onclick="analyzeImage()"
+        >
+            Analyze Image
+        </button>
+
+
+        <!-- STATUS -->
+
+        <div
+            id="status"
+            class="status"
+        ></div>
+
+
+        <!-- RESULTS -->
+
+        <div
+            id="results"
+            class="results"
+        >
+
+
+            <h2>
+                AI Analysis Result
+            </h2>
+
+
+            <!-- STATISTICS -->
+
+            <div class="result-grid">
+
+
+                <div
+                    class="result-box change-percentage"
+                >
+
+                    <div class="label">
+                        Detected Change
+                    </div>
+
+                    <div
+                        class="value"
+                        id="changePercentage"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+
+                <div class="result-box">
+
+                    <div class="label">
+                        Changed Pixels
+                    </div>
+
+                    <div
+                        class="value"
+                        id="changedPixels"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+
+                <div class="result-box">
+
+                    <div class="label">
+                        Total Pixels
+                    </div>
+
+                    <div
+                        class="value"
+                        id="totalPixels"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+
+                <div class="result-box">
+
+                    <div class="label">
+                        Mean Prediction Score
+                    </div>
+
+                    <div
+                        class="value"
+                        id="predictionMean"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+
+                <div class="result-box">
+
+                    <div class="label">
+                        Detection Threshold
+                    </div>
+
+                    <div
+                        class="value"
+                        id="threshold"
+                    >
+                        --
+                    </div>
+
+                </div>
+
+
+            </div>
+
+
+            <!-- BEFORE / AFTER -->
+
+            <div class="image-section">
+
+                <h2>
+                    Satellite Image Comparison
+                </h2>
+
+
+                <div class="image-grid">
+
+
+                    <div class="image-card">
+
+                        <h3>
+                            Before Image
+                        </h3>
+
+                        <img
+                            id="beforeImage"
+                            alt="Before satellite image"
+                        >
+
+                    </div>
+
+
+                    <div class="image-card">
+
+                        <h3>
+                            After Image
+                        </h3>
+
+                        <img
+                            id="afterImage"
+                            alt="After satellite image"
+                        >
+
+                    </div>
+
+
+                </div>
+
+            </div>
+
+
+            <!-- CHANGE MAP -->
+
+            <div class="change-map-section">
+
+                <h2>
+                    AI Change Map
+                </h2>
+
+
+                <div class="change-map-container">
+
+                    <img
+                        id="changeMap"
+                        alt="AI detected change map"
+                    >
+
+
+                    <div class="map-legend">
+
+                        <span class="legend-box"></span>
+
+                        White =
+                        Detected Change
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- CHANGE OVERLAY -->
+
+            <div class="overlay-section">
+
+                <h2>
+                    Satellite Change Overlay
+                </h2>
+
+
+                <p class="overlay-description">
+                    Detected change regions are highlighted
+                    on the After satellite image.
+                </p>
+
+
+                <div class="overlay-container">
+
+                    <img
+                        id="changeOverlay"
+                        alt="Satellite image with detected change overlay"
+                    >
+
+
+                    <div class="overlay-legend">
+
+                        <span class="red-legend"></span>
+
+                        Red =
+                        Model-Detected Change
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+async function analyzeImage() {
+
+
+    const filename =
+        document
+            .getElementById("filename")
+            .value
+            .trim();
+
+
+    const button =
+        document
+            .getElementById("analyzeButton");
+
+
+    const status =
+        document
+            .getElementById("status");
+
+
+    const results =
+        document
+            .getElementById("results");
+
+
+    const beforeImage =
+        document
+            .getElementById("beforeImage");
+
+
+    const afterImage =
+        document
+            .getElementById("afterImage");
+
+
+    const changeMap =
+        document
+            .getElementById("changeMap");
+
+
+    const changeOverlay =
+        document
+            .getElementById("changeOverlay");
+
+
+    if (!filename) {
+
+        status.className =
+            "status error";
+
+        status.textContent =
+            "Please enter an image filename.";
+
+        return;
+
+    }
+
+
+    button.disabled = true;
+
+
+    status.className =
+        "status loading";
+
+    status.textContent =
+        "Running AI analysis... Please wait.";
+
+
+    results.style.display =
+        "none";
+
+
+    try {
+
+
+        const response =
+            await fetch(
+                "http://127.0.0.1:8000/api/analyze/"
+                + encodeURIComponent(filename)
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                data.detail ||
+                "AI analysis failed."
+            );
+
+        }
+
+
+        /* STATISTICS */
+
+        document
+            .getElementById(
+                "changePercentage"
+            )
+            .textContent =
+            data.change_percentage.toFixed(2)
+            + "%";
+
+
+        document
+            .getElementById(
+                "changedPixels"
+            )
+            .textContent =
+            data.predicted_change_pixels
+                .toLocaleString();
+
+
+        document
+            .getElementById(
+                "totalPixels"
+            )
+            .textContent =
+            data.total_pixels
+                .toLocaleString();
+
+
+        document
+            .getElementById(
+                "predictionMean"
+            )
+            .textContent =
+            (data.prediction_mean * 100)
+                .toFixed(2)
+            + "%";
+
+
+        document
+            .getElementById(
+                "threshold"
+            )
+            .textContent =
+            data.threshold;
+
+
+        /* IMAGES */
+
+        beforeImage.src =
+            data.before_image;
+
+
+        afterImage.src =
+            data.after_image;
+
+
+        changeMap.src =
+            data.change_map;
+
+
+        changeOverlay.src =
+            data.change_overlay;
+
+
+        /* SHOW RESULTS */
+
+        status.style.display =
+            "none";
+
+
+        results.style.display =
+            "block";
+
+    }
+
+
+    catch (error) {
+
+        status.className =
+            "status error";
+
+        status.textContent =
+            "Error: "
+            + error.message;
+
+        results.style.display =
+            "none";
+
+    }
+
+
+    finally {
+
+        button.disabled =
+            false;
+
+    }
+
+}
+
+
+</script>
+
+
+</body>
+
+</html>
