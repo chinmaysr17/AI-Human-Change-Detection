@@ -1,0 +1,57 @@
+{
+  "model": {
+    "name": "change_detection_cnn_final",
+    "file": "change_detection_cnn_final.keras",
+    "architecture": "CNN encoder-decoder",
+    "task": "Binary satellite image change detection",
+    "parameters": 167969,
+    "trainable_parameters": 167969,
+    "non_trainable_parameters": 0,
+    "model_size_kb": 656.13
+  },
+  "input": {
+    "shape": [256, 256, 6],
+    "description": "Before and After RGB satellite images concatenated along the channel dimension",
+    "before_channels": 3,
+    "after_channels": 3
+  },
+  "output": {
+    "shape": [256, 256, 1],
+    "activation": "sigmoid",
+    "description": "Pixel-level binary change probability map"
+  },
+  "dataset": {
+    "name": "LEVIR-CD",
+    "total_samples": 128,
+    "training_samples": 102,
+    "validation_samples": 13,
+    "test_samples": 13,
+    "split": {
+      "test_size": 0.10,
+      "validation_size": 0.10,
+      "random_state": 42
+    }
+  },
+  "training": {
+    "epochs": 20,
+    "batch_size": 8,
+    "optimizer": "Adam",
+    "learning_rate": 0.001,
+    "loss": "Weighted Binary Cross-Entropy",
+    "positive_class_weight": 3.0,
+    "test_data_used_for_training": false
+  },
+  "evaluation": {
+    "threshold": 0.50,
+    "threshold_selection": "Selected using validation set",
+    "test_precision_percent": 29.48,
+    "test_recall_percent": 86.72,
+    "test_f1_percent": 44.00,
+    "test_iou_percent": 28.21
+  },
+  "scope": {
+    "primary_task": "Building-change detection on LEVIR-CD",
+    "multi_category_human_induced_change_classification": false,
+    "note": "The current model is a binary change-detection model trained and evaluated on LEVIR-CD. These metrics should not be interpreted as validation of multi-category human-induced change detection on Sentinel-2 imagery."
+  }
+}

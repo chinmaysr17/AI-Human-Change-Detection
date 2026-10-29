@@ -1,0 +1,669 @@
+
+/* =====================================================
+   GLOBAL STYLES
+===================================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #f4f7fb;
+    color: #1f2937;
+}
+
+.container {
+    width: 92%;
+    max-width: 1400px;
+    margin: 30px auto;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.header {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.header h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+}
+
+.header p {
+    margin: 0;
+    color: #6b7280;
+}
+
+/* =====================================================
+   INPUTS AND BUTTONS
+===================================================== */
+
+.input-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.input-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.input-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.input-row input {
+    flex: 1;
+    min-width: 250px;
+    padding: 12px 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 15px;
+}
+
+.input-row button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.input-row button:hover,
+.date-action-button:hover,
+.history-button:hover {
+    background: #1d4ed8;
+}
+
+.input-row button:disabled,
+.date-action-button:disabled,
+.history-button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+/* =====================================================
+   STATUS MESSAGES
+===================================================== */
+
+.status {
+    display: none;
+    margin-top: 15px;
+    padding: 12px 15px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.status.loading {
+    display: block;
+}
+
+.status.error,
+.history-status.error {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+/* =====================================================
+   MODEL INFORMATION
+===================================================== */
+
+.model-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.model-section h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.model-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+}
+
+.model-box {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 15px;
+    overflow-wrap: anywhere;
+}
+
+.model-box span {
+    display: block;
+    color: #6b7280;
+    font-size: 13px;
+    margin-bottom: 5px;
+}
+
+.model-box strong {
+    font-size: 16px;
+}
+
+.model-note {
+    margin-top: 18px;
+    padding: 14px;
+    background: #fff7ed;
+    border-left: 4px solid #f97316;
+    border-radius: 6px;
+    color: #9a3412;
+    line-height: 1.5;
+}
+
+/* =====================================================
+   ANALYSIS STATISTICS
+===================================================== */
+
+.stats-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.stat-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.stat-card h3 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.stat-card p {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* =====================================================
+   DETECTED CHANGE REGIONS
+===================================================== */
+
+.regions-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.regions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.regions-header h2 {
+    margin: 0;
+}
+
+.region-count {
+    background: #eff6ff;
+    color: #1d4ed8;
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.regions-table-wrapper {
+    overflow-x: auto;
+}
+
+.regions-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 1050px;
+}
+
+.regions-table th {
+    background: #f8fafc;
+    text-align: left;
+    padding: 13px;
+    border-bottom: 2px solid #e5e7eb;
+    font-size: 13px;
+    color: #4b5563;
+    white-space: nowrap;
+}
+
+.regions-table td {
+    padding: 13px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.regions-table tr:hover {
+    background: #f9fafb;
+}
+
+.region-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.area-value {
+    font-weight: bold;
+}
+
+.feature-value {
+    font-weight: 600;
+}
+
+.region-location {
+    color: #4b5563;
+}
+
+.no-regions {
+    padding: 25px;
+    text-align: center;
+    color: #6b7280;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+/* =====================================================
+   IMAGE COMPARISON AND CHANGE MAPS
+===================================================== */
+
+.image-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.image-section h2 {
+    margin-top: 0;
+}
+
+.image-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.image-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f9fafb;
+    min-width: 0;
+}
+
+.image-card h3 {
+    margin: 0;
+    padding: 12px 15px;
+    background: #f3f4f6;
+    font-size: 15px;
+}
+
+.image-card img {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #000000;
+}
+
+.region-image-wrapper {
+    position: relative;
+    width: 100%;
+    background: #000000;
+}
+
+.region-image-wrapper img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
+#regionCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.region-legend {
+    padding: 12px;
+    background: #111827;
+    color: #ffffff;
+    text-align: center;
+    font-size: 14px;
+}
+
+/* =====================================================
+   LOCATION SELECTION
+===================================================== */
+
+.location-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.location-section h2 {
+    margin: 0 0 10px;
+}
+
+.location-description {
+    color: #6b7280;
+    line-height: 1.5;
+    margin-bottom: 18px;
+}
+
+#locationMap {
+    width: 100%;
+    height: 450px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    z-index: 1;
+}
+
+.location-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.location-detail {
+    padding: 14px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+
+.location-detail span {
+    display: block;
+    margin-top: 6px;
+    color: #1d4ed8;
+    font-weight: bold;
+}
+
+.location-status {
+    margin-top: 15px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    line-height: 1.5;
+}
+
+/* LOCATION SEARCH RESULTS */
+
+#locationSearchResults .location-search-result {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 12px;
+    margin: 4px 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #1f2937;
+    cursor: pointer;
+}
+
+#locationSearchResults .location-search-result:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+#locationSearchResults .search-message {
+    padding: 8px 4px;
+    color: #4b5563;
+    line-height: 1.5;
+}
+
+/* =====================================================
+   BEFORE AND AFTER DATE SELECTION
+===================================================== */
+
+.date-selection-section {
+    margin-top: 22px;
+    padding-top: 22px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.date-selection-section h3 {
+    margin: 0 0 8px;
+}
+
+.date-input-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin: 18px 0;
+}
+
+.date-input-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f8fafc;
+}
+
+.date-input-card label {
+    font-weight: bold;
+}
+
+.date-input-card input {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 7px;
+    background: #ffffff;
+    font: inherit;
+}
+
+.date-input-card small {
+    color: #6b7280;
+}
+
+.date-action-button {
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* =====================================================
+   ANALYSIS HISTORY
+===================================================== */
+
+.history-section {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 25px 30px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.history-header h2 {
+    margin: 0;
+}
+
+.history-button {
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: #2563eb;
+    color: #ffffff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.history-status {
+    margin: 12px 0;
+    padding: 11px 13px;
+    border-radius: 8px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    line-height: 1.5;
+}
+
+.history-table-wrapper {
+    overflow-x: auto;
+}
+
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 850px;
+}
+
+.history-table th,
+.history-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.history-table th {
+    background: #f8fafc;
+    color: #4b5563;
+}
+
+.history-empty {
+    padding: 22px;
+    text-align: center;
+    background: #f9fafb;
+    border-radius: 8px;
+    color: #6b7280;
+}
+
+/* =====================================================
+   FOOTER
+===================================================== */
+
+.footer {
+    text-align: center;
+    color: #6b7280;
+    font-size: 13px;
+    padding: 20px;
+}
+
+/* =====================================================
+   RESPONSIVE DESIGN
+===================================================== */
+
+@media (max-width: 600px) {
+    .container {
+        width: 95%;
+        margin: 15px auto;
+    }
+
+    .header {
+        padding: 20px;
+    }
+
+    .header h1 {
+        font-size: 22px;
+    }
+
+    .input-section,
+    .model-section,
+    .regions-section,
+    .image-section,
+    .history-section {
+        padding: 18px;
+    }
+
+    .input-row {
+        flex-direction: column;
+    }
+
+    .input-row input {
+        width: 100%;
+        min-width: 100%;
+    }
+
+    .input-row button {
+        width: 100%;
+    }
+
+    .location-section {
+        padding: 18px;
+    }
+
+    #locationMap {
+        height: 360px;
+    }
+
+    .stats-section {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .stat-card p {
+        font-size: 20px;
+    }
+
+    .image-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
