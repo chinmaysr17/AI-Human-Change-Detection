@@ -16,7 +16,7 @@ ENV/
 # Jupyter
 .ipynb_checkpoints/
 
-# Environment files
+# Environment files and secrets
 .env
 .env.*
 !.env.example
@@ -25,8 +25,11 @@ ENV/
 .DS_Store
 Thumbs.db
 
-# Dataset
+# Datasets
 dataset/
+
+# Downloaded and processed satellite imagery
+data/sentinel2/
 
 # Generated outputs
 /outputs/
