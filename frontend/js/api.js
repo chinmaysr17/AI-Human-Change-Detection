@@ -25,7 +25,7 @@ async function apiRequest(endpoint, options = {}) {
         });
     } catch (error) {
         throw new Error(
-            "Cannot connect to the backend. Make sure your FastAPI server is running at http://127.0.0.1:8000."
+            "Cannot connect to the backend. Make sure FastAPI is running at http://127.0.0.1:8000."
         );
     }
 
@@ -35,7 +35,7 @@ async function apiRequest(endpoint, options = {}) {
         data = await response.json();
     } catch (error) {
         throw new Error(
-            `The backend returned an invalid response (HTTP ${response.status}).`
+            `Invalid backend response (HTTP ${response.status}).`
         );
     }
 
@@ -58,7 +58,6 @@ async function apiRequest(endpoint, options = {}) {
 
 // =====================================================
 // GET MODEL INFORMATION
-// Backend endpoint: GET /api/model
 // =====================================================
 
 async function getModelInformation() {
@@ -67,8 +66,7 @@ async function getModelInformation() {
 
 
 // =====================================================
-// ANALYZE SATELLITE IMAGE
-// Backend endpoint: GET /api/analyze/{filename}
+// ORIGINAL LEVIR-CD IMAGE ANALYSIS
 // =====================================================
 
 async function analyzeSatelliteImage(filename) {
@@ -85,8 +83,7 @@ async function analyzeSatelliteImage(filename) {
 
 
 // =====================================================
-// SAVE ANALYSIS LOCATION AND DATE SELECTION
-// Backend endpoint: POST /api/analysis-selection
+// SAVE LOCATION AND DATE SELECTION
 // =====================================================
 
 async function saveAnalysisSelection(selection) {
@@ -102,8 +99,44 @@ async function saveAnalysisSelection(selection) {
 
 
 // =====================================================
+// NEW: LOCATION-BASED SENTINEL-2 ANALYSIS
+// Backend: POST /api/analyze-location
+// =====================================================
+
+async function analyzeLocation(selection) {
+    if (!selection || typeof selection !== "object") {
+        throw new Error("Invalid location analysis request.");
+    }
+
+    const requiredFields = [
+        "latitude",
+        "longitude",
+        "radius_km",
+        "before_date",
+        "after_date"
+    ];
+
+    for (const field of requiredFields) {
+        if (selection[field] === undefined || selection[field] === null) {
+            throw new Error(`Missing required field: ${field}`);
+        }
+    }
+
+    return await apiRequest("/api/analyze-location", {
+        method: "POST",
+        body: JSON.stringify({
+            latitude: Number(selection.latitude),
+            longitude: Number(selection.longitude),
+            radius_km: Number(selection.radius_km),
+            before_date: selection.before_date,
+            after_date: selection.after_date
+        })
+    });
+}
+
+
+// =====================================================
 // GET ANALYSIS HISTORY
-// Backend endpoint: GET /api/analysis-history
 // =====================================================
 
 async function getAnalysisHistory() {
