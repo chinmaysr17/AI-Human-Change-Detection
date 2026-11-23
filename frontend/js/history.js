@@ -42,6 +42,8 @@ function createHistoryCard(record, index) {
 
     const heading = document.createElement("h3");
 
+    heading.className = "history-card-heading";
+
     heading.textContent =
         record.filename ||
         record.image_filename ||
@@ -68,8 +70,13 @@ function createHistoryCard(record, index) {
         }
 
         const row = document.createElement("p");
+        row.className = "history-detail-row";
         const labelElement = document.createElement("strong");
+        labelElement.className = "history-detail-label";
         const valueElement = document.createElement("span");
+        valueElement.className = label === "Status"
+            ? "history-detail-value history-status-badge"
+            : "history-detail-value";
 
         labelElement.textContent = `${label}: `;
 
