@@ -3832,3 +3832,155 @@ body[data-theme="dark"] #historySection #analysisHistoryContainer > article.hist
         max-width: 64% !important;
     }
 }
+
+
+/* =====================================================
+   MODEL INFORMATION - RESEARCH SUMMARY REFINEMENT
+   Presentation only: all values remain backend-driven.
+===================================================== */
+
+#modelSection {
+    padding: clamp(22px, 2.6vw, 34px) !important;
+}
+
+#modelSection > h2 {
+    margin: 0 0 8px !important;
+    color: var(--gv-text);
+    font-size: clamp(22px, 2vw, 26px) !important;
+    font-weight: 760;
+    letter-spacing: -.5px;
+}
+
+#modelSection > h2::after {
+    content: "Architecture, input configuration and evaluation details";
+    display: block;
+    margin-top: 8px;
+    color: var(--gv-muted);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+    line-height: 1.6;
+}
+
+#modelSection .model-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 24px;
+}
+
+#modelSection .model-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+    min-height: 112px;
+    padding: 17px 18px;
+    border: 1px solid var(--gv-border);
+    border-radius: 13px;
+    background: #fcfbfe;
+    box-shadow: 0 3px 12px rgba(43, 32, 73, .025);
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+#modelSection .model-box:hover {
+    transform: translateY(-2px);
+    border-color: #d9ccef;
+    box-shadow: 0 8px 18px rgba(43, 32, 73, .055);
+}
+
+#modelSection .model-box > span {
+    margin: 0 0 12px;
+    color: var(--gv-muted);
+    font-size: 11px;
+    font-weight: 650;
+    letter-spacing: .15px;
+}
+
+#modelSection .model-box > strong {
+    color: var(--gv-text) !important;
+    font-size: clamp(15px, 1.4vw, 19px);
+    font-weight: 760;
+    letter-spacing: -.25px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+    font-variant-numeric: tabular-nums;
+}
+
+#modelSection #modelTask,
+#modelSection #modelInput {
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+#modelSection #modelF1 {
+    color: #16845f !important;
+}
+
+#modelSection .model-note {
+    margin-top: 22px;
+    padding: 17px 19px;
+    border: 1px solid #f1dfc9;
+    border-left: 4px solid #dc8a3d;
+    border-radius: 11px;
+    background: #fff8ef;
+    color: #8e4b1e;
+    font-size: 12px;
+    line-height: 1.75;
+}
+
+#modelSection .model-note:empty {
+    display: none;
+}
+
+body[data-theme="dark"] #modelSection .model-box {
+    border-color: var(--gv-border);
+    background: var(--gv-surface);
+}
+
+body[data-theme="dark"] #modelSection .model-box > span {
+    color: var(--gv-muted);
+}
+
+body[data-theme="dark"] #modelSection .model-box > strong {
+    color: var(--gv-text) !important;
+}
+
+body[data-theme="dark"] #modelSection #modelF1 {
+    color: #69c9a3 !important;
+}
+
+body[data-theme="dark"] #modelSection .model-note {
+    border-color: #63462f;
+    border-left-color: #d99a5d;
+    background: #38291f;
+    color: #f1c49c;
+}
+
+@media (max-width: 1100px) {
+    #modelSection .model-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 560px) {
+    #modelSection {
+        padding: 19px 16px !important;
+    }
+
+    #modelSection .model-grid {
+        grid-template-columns: 1fr;
+        gap: 11px;
+        margin-top: 19px;
+    }
+
+    #modelSection .model-box {
+        min-height: 88px;
+        padding: 15px;
+    }
+
+    #modelSection .model-note {
+        margin-top: 17px;
+        padding: 14px;
+    }
+}
