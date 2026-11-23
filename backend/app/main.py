@@ -424,8 +424,14 @@ def analyze_location(selection: AnalysisSelectionRequest):
             latitude=selection.latitude,
             longitude=selection.longitude,
             radius_km=selection.radius_km,
-            before_date=selection.before_date,
-            after_date=selection.after_date,
+            before_date=datetime.combine(
+                selection.before_date,
+                datetime.min.time()
+            ),
+            after_date=datetime.combine(
+                selection.after_date,
+                datetime.min.time()
+            ),
             record_id=record_id,
         )
         imagery_retrieved = True
