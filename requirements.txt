@@ -4,10 +4,26 @@ cycler==0.12.1
 fonttools==4.63.0
 kiwisolver==1.5.0
 matplotlib==3.11.1
-numpy==2.5.1
+numpy==2.1.3
 opencv-python==5.0.0.93
 packaging==26.3
 pillow==12.3.0
 pyparsing==3.3.2
 python-dateutil==2.9.0.post0
 six==1.17.0
+
+# Backend API and server
+fastapi>=0.115,<1.0
+uvicorn[standard]>=0.30,<1.0
+pydantic>=2.10,<3.0
+
+# Database
+SQLAlchemy>=2.0,<3.0
+psycopg[binary]>=3.2,<4.0
+
+# Authentication and configuration
+argon2-cffi>=23.1,<26.0
+python-dotenv>=1.0,<2.0
+
+# Sentinel-2 imagery retrieval
+requests>=2.32,<3.0
