@@ -3984,3 +3984,354 @@ body[data-theme="dark"] #modelSection .model-note {
         padding: 14px;
     }
 }
+
+
+/* =====================================================
+   SETTINGS - CONSISTENT WORKSPACE REFINEMENT
+   Existing controls and navigation behavior are preserved.
+===================================================== */
+
+#settingsSection {
+    min-width: 0;
+}
+
+#settingsSection .page-intro {
+    margin-bottom: 4px;
+}
+
+#settingsSection .page-intro .page-eyebrow {
+    color: var(--gv-primary);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+#settingsSection .page-intro h2 {
+    margin: 7px 0;
+    color: var(--gv-text);
+    font-size: clamp(23px, 2.2vw, 28px);
+    font-weight: 760;
+    letter-spacing: -.5px;
+}
+
+#settingsSection .page-intro p {
+    margin: 0;
+    color: var(--gv-muted);
+    font-size: 13px;
+    line-height: 1.65;
+}
+
+#settingsSection .settings-layout {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 19px;
+    margin-top: 24px;
+}
+
+#settingsSection .settings-nav {
+    position: sticky;
+    top: 118px;
+    padding: 17px 12px;
+    border: 1px solid var(--gv-border);
+    border-radius: 14px;
+    background: var(--gv-surface);
+    box-shadow: 0 5px 18px rgba(43, 32, 73, .035);
+}
+
+#settingsSection .settings-nav h3 {
+    margin: 13px 9px 7px;
+    color: var(--gv-muted);
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 1.15px;
+}
+
+#settingsSection .settings-nav-item {
+    min-height: 42px;
+    margin: 3px 0;
+    padding: 10px 11px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: var(--gv-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+#settingsSection .settings-nav-item:hover {
+    background: var(--gv-primary-light);
+    color: var(--gv-primary);
+}
+
+#settingsSection .settings-nav-item.active {
+    border-color: rgba(126, 96, 199, .13);
+    background: var(--gv-primary-light);
+    color: var(--gv-primary);
+    font-weight: 750;
+}
+
+#settingsSection .settings-nav-item span {
+    flex: 0 0 20px;
+    font-size: 14px;
+}
+
+#settingsSection .settings-content {
+    min-width: 0;
+}
+
+#settingsSection .settings-card {
+    min-width: 0;
+    padding: clamp(20px, 2.2vw, 28px);
+    border: 1px solid var(--gv-border);
+    border-radius: 15px;
+    background: var(--gv-surface);
+    box-shadow: 0 5px 20px rgba(43, 32, 73, .035);
+}
+
+#settingsSection .settings-card-heading {
+    align-items: center;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--gv-border);
+}
+
+#settingsSection .settings-card-heading h3 {
+    color: var(--gv-text);
+    font-size: 17px;
+    font-weight: 750;
+    letter-spacing: -.2px;
+}
+
+#settingsSection .settings-card-heading p {
+    color: var(--gv-muted);
+    font-size: 12px;
+}
+
+#settingsSection .settings-section-icon {
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--gv-border);
+    border-radius: 11px;
+    background: var(--gv-primary-light);
+}
+
+#settingsSection .settings-profile {
+    margin-top: 21px;
+    padding: 18px;
+    border-color: var(--gv-border);
+    border-radius: 12px;
+    background: linear-gradient(110deg, var(--gv-primary-light), var(--gv-surface));
+}
+
+#settingsSection .settings-profile h4 {
+    color: var(--gv-text);
+    font-size: 15px;
+    font-weight: 750;
+}
+
+#settingsSection .settings-profile p {
+    color: var(--gv-muted);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+
+#settingsSection .settings-account-label {
+    background: var(--gv-primary-light);
+    color: var(--gv-primary);
+}
+
+#settingsSection .settings-divider {
+    background: var(--gv-border);
+}
+
+#settingsSection .settings-detail {
+    gap: 18px;
+}
+
+#settingsSection .settings-detail > div {
+    padding: 13px 14px;
+    border: 1px solid var(--gv-border);
+    border-radius: 10px;
+    background: var(--gv-background);
+}
+
+#settingsSection .settings-detail span {
+    color: var(--gv-muted);
+    font-size: 11px;
+    font-weight: 600;
+}
+
+#settingsSection .settings-detail strong {
+    color: var(--gv-text);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+#settingsSection .appearance-toggle-row,
+#settingsSection .settings-security-item {
+    padding: 17px 0;
+    border-bottom: 1px solid var(--gv-border);
+}
+
+#settingsSection .appearance-toggle-info strong,
+#settingsSection .settings-security-item strong {
+    color: var(--gv-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#settingsSection .appearance-toggle-info p,
+#settingsSection .settings-security-item p,
+#settingsSection .appearance-note {
+    color: var(--gv-muted);
+    font-size: 11px;
+    line-height: 1.7;
+}
+
+#settingsSection .appearance-note {
+    margin: 17px 0 0;
+}
+
+#settingsSection .settings-security-status {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border: 1px solid #cde9dc;
+    border-radius: 999px;
+    background: #effaf4;
+    color: #24734d;
+    font-size: 10px;
+    font-weight: 750;
+}
+
+#settingsSection .settings-about-brand {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 20px 0;
+    padding: 17px;
+    border: 1px solid var(--gv-border);
+    border-radius: 12px;
+    background: var(--gv-background);
+}
+
+#settingsSection .settings-about-brand h3 {
+    margin: 0 0 5px;
+    color: var(--gv-text);
+    font-size: 15px;
+}
+
+#settingsSection .settings-about-brand p {
+    margin: 0;
+    color: var(--gv-muted);
+    font-size: 11px;
+}
+
+#settingsSection .settings-about-icon {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #9276df, #6247b1);
+    color: #ffffff;
+    font-size: 22px;
+}
+
+body[data-theme="dark"] #settingsSection .settings-nav,
+body[data-theme="dark"] #settingsSection .settings-card {
+    border-color: var(--gv-border);
+    background: var(--gv-surface);
+}
+
+body[data-theme="dark"] #settingsSection .settings-nav-item {
+    color: var(--gv-muted);
+}
+
+body[data-theme="dark"] #settingsSection .settings-nav-item:hover,
+body[data-theme="dark"] #settingsSection .settings-nav-item.active {
+    background: var(--gv-primary-light);
+    color: var(--gv-text);
+}
+
+body[data-theme="dark"] #settingsSection .settings-card-heading {
+    border-color: var(--gv-border);
+}
+
+body[data-theme="dark"] #settingsSection .settings-card-heading h3,
+body[data-theme="dark"] #settingsSection .settings-profile h4,
+body[data-theme="dark"] #settingsSection .settings-detail strong,
+body[data-theme="dark"] #settingsSection .appearance-toggle-info strong,
+body[data-theme="dark"] #settingsSection .settings-security-item strong {
+    color: var(--gv-text);
+}
+
+body[data-theme="dark"] #settingsSection .settings-profile,
+body[data-theme="dark"] #settingsSection .settings-detail > div,
+body[data-theme="dark"] #settingsSection .settings-about-brand {
+    border-color: var(--gv-border);
+    background: var(--gv-background);
+}
+
+body[data-theme="dark"] #settingsSection .settings-divider,
+body[data-theme="dark"] #settingsSection .appearance-toggle-row,
+body[data-theme="dark"] #settingsSection .settings-security-item {
+    border-color: var(--gv-border);
+}
+
+body[data-theme="dark"] #settingsSection .settings-security-status {
+    border-color: #315b48;
+    background: #20392f;
+    color: #a5dfbf;
+}
+
+@media (max-width: 900px) {
+    #settingsSection .settings-layout {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    #settingsSection .settings-nav {
+        position: static;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    #settingsSection .settings-nav h3 {
+        flex: 0 0 100%;
+        margin: 9px 6px 3px;
+    }
+
+    #settingsSection .settings-nav-item {
+        flex: 0 1 auto;
+        width: auto;
+    }
+}
+
+@media (max-width: 560px) {
+    #settingsSection .settings-nav {
+        padding: 12px;
+    }
+
+    #settingsSection .settings-nav-item {
+        flex: 1 1 calc(50% - 5px);
+        justify-content: flex-start;
+        font-size: 11px;
+    }
+
+    #settingsSection .settings-card {
+        padding: 17px;
+    }
+
+    #settingsSection .settings-profile {
+        align-items: flex-start;
+        padding: 14px;
+    }
+
+    #settingsSection .settings-detail {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    #settingsSection .settings-card-heading {
+        gap: 10px;
+    }
+}
