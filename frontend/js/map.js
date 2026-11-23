@@ -287,6 +287,7 @@ function getAnalysisResultsContainer() {
 
     container = document.createElement("section");
     container.id = "sentinelAnalysisResults";
+    container.className = "analysis-results-panel";
 
     container.style.marginTop = "25px";
     container.style.padding = "20px";
@@ -318,10 +319,12 @@ function displayAnalysisResults(result) {
     container.style.display = "block";
 
     const heading = document.createElement("h2");
+    heading.className = "analysis-results-heading";
     heading.textContent = "Satellite Change Detection Results";
     container.appendChild(heading);
 
     const warning = document.createElement("p");
+    warning.className = "analysis-results-warning";
     warning.textContent = result.validation_status ||
         "Experimental prediction: model performance on Sentinel-2 has not been validated.";
 
@@ -333,6 +336,7 @@ function displayAnalysisResults(result) {
     container.appendChild(warning);
 
     const statistics = document.createElement("div");
+    statistics.className = "analysis-statistics-grid";
     statistics.style.display = "grid";
     statistics.style.gridTemplateColumns =
         "repeat(auto-fit, minmax(150px, 1fr))";
@@ -350,17 +354,20 @@ function displayAnalysisResults(result) {
 
     statItems.forEach(function ([label, value]) {
         const card = document.createElement("div");
+        card.className = "analysis-stat-card";
 
         card.style.padding = "14px";
         card.style.border = "1px solid #e5e7eb";
         card.style.borderRadius = "8px";
 
         const title = document.createElement("div");
+        title.className = "analysis-stat-label";
         title.textContent = label;
         title.style.fontSize = "13px";
         title.style.color = "#64748b";
 
         const number = document.createElement("strong");
+        number.className = "analysis-stat-value";
         number.textContent = value;
         number.style.display = "block";
         number.style.fontSize = "20px";
@@ -373,6 +380,7 @@ function displayAnalysisResults(result) {
     container.appendChild(statistics);
 
     const imageGrid = document.createElement("div");
+    imageGrid.className = "analysis-image-grid";
 
     imageGrid.style.display = "grid";
     imageGrid.style.gridTemplateColumns =
@@ -388,11 +396,14 @@ function displayAnalysisResults(result) {
 
     imageItems.forEach(function ([label, source]) {
         const card = document.createElement("div");
+        card.className = "analysis-image-card";
 
         const title = document.createElement("h3");
+        title.className = "analysis-image-title";
         title.textContent = label;
 
         const image = document.createElement("img");
+        image.className = "analysis-result-image";
         image.src = source;
         image.alt = label;
         image.style.width = "100%";
@@ -407,6 +418,7 @@ function displayAnalysisResults(result) {
     container.appendChild(imageGrid);
 
     const record = document.createElement("p");
+    record.className = "analysis-record-meta";
     record.textContent = `Analysis record ID: ${result.record_id}`;
     record.style.marginTop = "20px";
     record.style.color = "#64748b";
