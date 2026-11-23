@@ -1,4 +1,4 @@
-
+﻿
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -123,44 +123,6 @@
             </div>
         </section>
 
-        <!-- ANALYSIS INPUT -->
-        <section class="input-section">
-            <h2>2. Satellite Image Analysis</h2>
-
-            <p>
-                Enter the filename of an image supported by the
-                backend dataset and run the analysis.
-            </p>
-
-            <label for="filename">Dataset Image Filename</label>
-
-            <div class="input-row">
-                <input
-                    type="text"
-                    id="filename"
-                    value="test_1.png"
-                    placeholder="Example: test_1.png"
-                >
-
-                <button type="button" id="analyzeButton">
-                    Analyze Image
-                </button>
-            </div>
-
-            <div
-                id="status"
-                class="status"
-                role="status"
-                aria-live="polite"
-            ></div>
-
-            <p class="location-description">
-                Note: The current analysis uses an existing dataset
-                image. Selecting a map location and dates does not
-                automatically retrieve satellite imagery.
-            </p>
-        </section>
-
         <!-- MODEL INFORMATION -->
         <section class="model-section">
             <h2>3. Model Information</h2>
@@ -212,141 +174,10 @@
             </div>
         </section>
 
-        <!-- ANALYSIS STATISTICS -->
-        <section>
-            <h2>4. Analysis Statistics</h2>
-
-            <div class="stats-section">
-                <div class="stat-card">
-                    <h3>Change Percentage</h3>
-                    <p id="changePercentage">--</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Changed Pixels</h3>
-                    <p id="changedPixels">--</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Total Pixels</h3>
-                    <p id="totalPixels">--</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Mean Prediction</h3>
-                    <p id="meanPrediction">--</p>
-                </div>
-
-                <div class="stat-card">
-                    <h3>Detection Threshold</h3>
-                    <p id="threshold">--</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- DETECTED REGIONS -->
-        <section class="regions-section">
-            <div class="regions-header">
-                <h2>5. Detected Change Regions</h2>
-
-                <span class="region-count" id="regionCount">
-                    0 regions
-                </span>
-            </div>
-
-            <div id="regionsContainer">
-                <div class="no-regions">
-                    Run an image analysis to view detected regions.
-                </div>
-            </div>
-        </section>
-
-        <!-- IMAGE COMPARISON -->
-        <section class="image-section">
-            <h2>6. Satellite Image Comparison</h2>
-
-            <div class="image-grid">
-                <div class="image-card">
-                    <h3>Before Image</h3>
-
-                    <img
-                        id="beforeImage"
-                        src=""
-                        alt="Satellite image before the change"
-                        hidden
-                    >
-
-                    <div class="no-regions" id="beforeImagePlaceholder">
-                        Before image will appear here when available.
-                    </div>
-                </div>
-
-                <div class="image-card">
-                    <h3>After Image / Detected Region</h3>
-
-                    <div class="region-image-wrapper">
-                        <img
-                            id="afterRegionImage"
-                            src=""
-                            alt="Satellite image showing the detected region"
-                            hidden
-                        >
-
-                        <canvas id="regionCanvas"></canvas>
-                    </div>
-
-                    <div
-                        class="no-regions"
-                        id="afterImagePlaceholder"
-                    >
-                        After image will appear here when available.
-                    </div>
-
-                    <div class="region-legend">
-                        Detected regions will be highlighted when
-                        supported by the analysis response.
-                    </div>
-                </div>
-
-                <div class="image-card">
-                    <h3>Change Map</h3>
-
-                    <img
-                        id="changeMap"
-                        src=""
-                        alt="Generated change detection map"
-                        hidden
-                    >
-
-                    <div class="no-regions" id="changeMapPlaceholder">
-                        Change map will appear here after analysis.
-                    </div>
-                </div>
-
-                <div class="image-card">
-                    <h3>Change Overlay</h3>
-
-                    <img
-                        id="changeOverlay"
-                        src=""
-                        alt="Satellite image with change detection overlay"
-                        hidden
-                    >
-
-                    <div
-                        class="no-regions"
-                        id="changeOverlayPlaceholder"
-                    >
-                        Change overlay will appear here when available.
-                    </div>
-                </div>
-            </div>
-        </section>
-
         <!-- ANALYSIS HISTORY -->
         <section class="history-section">
             <div class="history-header">
-                <h2>7. Analysis History</h2>
+                <h2>5. Analysis History</h2>
 
                 <button
                     type="button"
