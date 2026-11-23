@@ -3784,3 +3784,51 @@ body[data-theme="dark"] #historySection #analysisHistoryContainer > article.hist
         padding: 15px !important;
     }
 }
+
+
+/* Prevent long history values and backend error messages from
+   expanding cards beyond the viewport. Keep the full text readable. */
+#historySection,
+#historySection #analysisHistoryContainer,
+#historySection #analysisHistoryContainer > article.history-card {
+    min-width: 0;
+    max-width: 100%;
+}
+
+#historySection #analysisHistoryContainer > article.history-card > p {
+    min-width: 0;
+}
+
+#historySection #analysisHistoryContainer > article.history-card > p > strong {
+    min-width: 0;
+}
+
+#historySection #analysisHistoryContainer > article.history-card > p > span {
+    flex: 1 1 0 !important;
+    max-width: 60%;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word;
+}
+
+#historySection #analysisHistoryContainer > article.history-card > p > span.history-status-badge {
+    display: inline-block !important;
+    flex: 0 1 auto !important;
+    max-width: 60% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word;
+    text-align: right !important;
+    line-height: 1.45;
+}
+
+@media (max-width: 560px) {
+    #historySection #analysisHistoryContainer > article.history-card > p > strong {
+        flex-basis: 36% !important;
+    }
+
+    #historySection #analysisHistoryContainer > article.history-card > p > span,
+    #historySection #analysisHistoryContainer > article.history-card > p > span.history-status-badge {
+        max-width: 64% !important;
+    }
+}
