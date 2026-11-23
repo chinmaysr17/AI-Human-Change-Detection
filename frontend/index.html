@@ -1,38 +1,398 @@
-﻿
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>AI-Based Human-Induced Change Detection</title>
+    <title>GeoVision AI | Satellite Change Detection</title>
 
-    <!-- External CSS -->
     <link rel="stylesheet" href="css/style.css">
 
-    <!-- Leaflet Map CSS -->
     <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     >
 
-    <!-- Leaflet Map JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 
 <body>
     <main class="container">
 
-        <!-- HEADER -->
-        <header class="header">
-            <h1>AI-Based Human-Induced Change Detection</h1>
-            <p>
-                Satellite Image Analysis Using Deep Learning
-            </p>
-        </header>
+        <!-- ================================================= -->
+        <!-- AUTHENTICATION SCREEN -->
+        <!-- ================================================= -->
 
-        <!-- LOCATION SELECTION -->
-        <section class="location-section">
+        <section class="auth-section" id="authSection">
+
+    <div class="auth-visual-panel">
+        <div class="auth-brand">
+            <span class="auth-brand-icon">✦</span>
+            <span>GeoVision AI</span>
+        </div>
+
+        <div class="auth-visual-content">
+            <span class="auth-eyebrow">SATELLITE INTELLIGENCE</span>
+
+            <h2>Understand how our world is changing.</h2>
+
+            <p>
+                Discover human-induced landscape changes through
+                satellite imagery and artificial intelligence.
+            </p>
+
+            <div class="auth-feature">
+                <span>✦</span>
+                AI-powered change detection
+            </div>
+
+            <div class="auth-feature">
+                <span>◎</span>
+                Satellite image analysis
+            </div>
+
+            <div class="auth-feature">
+                <span>⌖</span>
+                Geographic monitoring
+            </div>
+        </div>
+
+        <div class="auth-visual-footer">
+            AI-Based Human-Induced Change Detection
+        </div>
+    </div>
+
+    <div class="auth-content-panel">
+
+        <div class="auth-content-heading">
+            <span class="auth-eyebrow">WELCOME</span>
+            <h2>Access your workspace</h2>
+            <p>Sign in to continue to your workspace.</p>
+        </div>
+
+        <div
+            id="authStatus"
+            class="auth-status"
+            role="status"
+            aria-live="polite"
+        >
+            Checking authentication status...
+        </div>
+
+        <div class="auth-forms" id="authForms">
+
+            <div class="auth-card" id="loginCard">
+                <h3>Welcome back</h3>
+                <p class="auth-card-description">
+                    Sign in to continue your analysis.
+                </p>
+
+                <form id="loginForm">
+
+                    <div class="auth-input-group">
+                        <label for="loginEmail">Email Address</label>
+                        <input
+                            type="email"
+                            id="loginEmail"
+                            name="email"
+                            placeholder="Enter your email"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+
+                    <div class="auth-input-group">
+                        <label for="loginPassword">Password</label>
+                        <input
+                            type="password"
+                            id="loginPassword"
+                            name="password"
+                            placeholder="Enter your password"
+                            autocomplete="current-password"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" id="loginButton">
+                        Sign In
+                    </button>
+
+               </form>
+
+                <div class="auth-switch">
+                    <span>New here?</span>
+                    <button type="button" id="showRegisterButton">
+                        Create an account
+                    </button>
+                </div>
+
+            </div>
+
+            <div class="auth-card" id="registerCard" hidden>
+                <h3>Create your account</h3>
+                <p class="auth-card-description">
+                    Get started with intelligent satellite analysis.
+                </p>
+
+                <form id="registerForm">
+
+                    <div class="auth-input-group">
+                        <label for="registerName">Full Name</label>
+                        <input
+                            type="text"
+                            id="registerName"
+                            name="full_name"
+                            placeholder="Enter your full name"
+                            autocomplete="name"
+                            required
+                        >
+                    </div>
+
+                    <div class="auth-input-group">
+                        <label for="registerEmail">Email Address</label>
+                        <input
+                            type="email"
+                            id="registerEmail"
+                            name="email"
+                            placeholder="Enter your email"
+                            autocomplete="email"
+                            required
+                        >
+                    </div>
+
+                    <div class="auth-input-group">
+                        <label for="registerPassword">Password</label>
+                        <input
+                            type="password"
+                            id="registerPassword"
+                            name="password"
+                            placeholder="Create a password"
+                            autocomplete="new-password"
+                            required
+                        >
+                    </div>
+
+                    <button type="submit" id="registerButton">
+                        Create Account
+                    </button>
+
+                </form>
+
+                <div class="auth-switch">
+                    <span>Already have an account?</span>
+                    <button type="button" id="showLoginButton">
+                        Sign in
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="user-panel" id="userPanel" hidden>
+            <h3>Welcome!</h3>
+
+            <div class="user-details">
+                <p>
+                    <strong>Name:</strong>
+                    <span id="loggedInUserName"></span>
+                </p>
+
+                <p>
+                    <strong>Email:</strong>
+                    <span id="loggedInUserEmail"></span>
+                </p>
+            </div>
+
+           
+        </div>
+
+    </div>
+
+</section>
+
+        <!-- ================================================= -->
+        <!-- AUTHENTICATED APPLICATION SHELL -->
+        <!-- ================================================= -->
+
+        <div class="dashboard-shell" id="dashboardShell" hidden>
+
+            <aside class="sidebar" id="appSidebar">
+                <div class="sidebar-brand">
+                    <span class="sidebar-brand-icon">✦</span>
+                    <div class="sidebar-brand-copy">
+                        <strong>GeoVision AI</strong>
+                        <small>Satellite Intelligence</small>
+                    </div>
+                </div>
+
+                <nav class="sidebar-menu" aria-label="Main navigation">
+                    <span class="sidebar-label">WORKSPACE</span>
+
+                    <button
+                        type="button"
+                        class="sidebar-link active"
+                        data-page-target="dashboardOverview"
+                        aria-current="page"
+                    >
+                        <span class="sidebar-link-icon">▦</span>
+                        <span>Dashboard</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="sidebar-link"
+                        data-page-target="locationSection"
+                    >
+                        <span class="sidebar-link-icon">⌖</span>
+                        <span>Satellite Analysis</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="sidebar-link"
+                        data-page-target="historySection"
+                    >
+                        <span class="sidebar-link-icon">◷</span>
+                        <span>Analysis History</span>
+                    </button>
+
+                    <button
+                        type="button"
+                        class="sidebar-link"
+                        data-page-target="modelSection"
+                    >
+                        <span class="sidebar-link-icon">◈</span>
+                        <span>Model Information</span>
+                    </button>
+
+                    <span class="sidebar-label sidebar-bottom-label">PREFERENCES</span>
+
+                    <button
+                        type="button"
+                        class="sidebar-link"
+                        data-page-target="settingsSection"
+                    >
+                        <span class="sidebar-link-icon">⚙</span>
+                        <span>Settings</span>
+                    </button>
+                </nav>
+
+                <div class="sidebar-footer">
+                    <span class="sidebar-footer-icon">✦</span>
+                    <div>
+                        <strong>GeoVision AI</strong>
+                        <small>Change Detection Platform</small>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="dashboard-main">
+
+                <header class="dashboard-topbar">
+                    <div class="dashboard-heading">
+                        <h1 id="dashboardPageTitle">Dashboard</h1>
+                        <p>Satellite Image Analysis Workspace</p>
+                    </div>
+
+                   
+<div class="dashboard-user">
+    <div class="dashboard-avatar" aria-hidden="true">U</div>
+    <span id="dashboardUserName">User</span>
+
+    <button
+        type="button"
+        id="logoutButton"
+        class="dashboard-logout-button"
+    >
+        Logout
+    </button>
+</div>
+
+                </header>
+
+                <main class="dashboard-content">
+
+                    <!-- DASHBOARD OVERVIEW -->
+                    <section
+                        class="dashboard-page overview-page"
+                        id="dashboardOverview"
+                    >
+                        <div class="page-intro">
+                            <span class="page-eyebrow">OVERVIEW</span>
+                            <h2>Welcome to GeoVision AI</h2>
+                            <p>
+                                Monitor landscape changes using satellite imagery
+                                and artificial intelligence.
+                            </p>
+                        </div>
+
+                        
+<div class="overview-cards">
+
+    <article class="overview-card">
+        <div class="overview-card-top">
+            <span class="overview-icon icon-purple">▦</span>
+            <span class="overview-card-label">ANALYSES</span>
+        </div>
+        <strong id="overviewTotalAnalyses">--</strong>
+        <span class="overview-card-title">Total Analyses</span>
+        <small>Saved analysis records</small>
+    </article>
+
+    <article class="overview-card">
+        <div class="overview-card-top">
+            <span class="overview-icon icon-blue">⌁</span>
+            <span class="overview-card-label">DETECTIONS</span>
+        </div>
+        <strong id="overviewDetectedChanges">--</strong>
+        <span class="overview-card-title">Detected Changes</span>
+        <small>Changes identified by the model</small>
+    </article>
+
+    <article class="overview-card">
+        <div class="overview-card-top">
+            <span class="overview-icon icon-green">⌖</span>
+            <span class="overview-card-label">LOCATIONS</span>
+        </div>
+        <strong id="overviewLocations">--</strong>
+        <span class="overview-card-title">Locations Analyzed</span>
+        <small>Unique analyzed locations</small>
+    </article>
+
+    <article class="overview-card">
+        <div class="overview-card-top">
+            <span class="overview-icon icon-orange">◎</span>
+            <span class="overview-card-label">MODEL PERFORMANCE</span>
+        </div>
+        <strong id="overviewModelF1">--</strong>
+        <span class="overview-card-title">Model F1 Score</span>
+        <small>Model evaluation metric</small>
+    </article>
+
+</div>
+
+                        <article class="overview-welcome-card">
+                            <div>
+                                <span class="page-eyebrow">GET STARTED</span>
+                                <h3>Start a Satellite Analysis</h3>
+                                <p>
+                                    Select a geographic location and compare
+                                    satellite observations from two dates.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                class="overview-action"
+                                data-page-target="locationSection"
+                            >
+                                Start Analysis
+                            </button>
+                        </article>
+                    </section>
+
+                    <!-- SATELLITE ANALYSIS -->
+                    <section class="location-section dashboard-page" id="locationSection" hidden>
             <h2>1. Location and Date Selection</h2>
 
             <p class="location-description">
@@ -123,9 +483,9 @@
             </div>
         </section>
 
-        <!-- MODEL INFORMATION -->
-        <section class="model-section">
-            <h2>3. Model Information</h2>
+                    <!-- MODEL INFORMATION -->
+                    <section class="model-section dashboard-page" id="modelSection" hidden>
+            <h2>Model Information</h2>
 
             <div class="model-grid">
                 <div class="model-box">
@@ -174,10 +534,10 @@
             </div>
         </section>
 
-        <!-- ANALYSIS HISTORY -->
-        <section class="history-section">
+                    <!-- ANALYSIS HISTORY -->
+                    <section class="history-section dashboard-page" id="historySection" hidden>
             <div class="history-header">
-                <h2>5. Analysis History</h2>
+                <h2>Analysis History</h2>
 
                 <button
                     type="button"
@@ -204,24 +564,277 @@
             </div>
         </section>
 
-        <!-- FOOTER -->
-        <footer class="footer">
+                  
+<!-- SETTINGS PAGE -->
+<section
+
+    class="dashboard-page settings-page"
+    id="settingsSection"
+    hidden
+>
+
+    <div class="page-intro">
+        <span class="page-eyebrow">PREFERENCES</span>
+        <h2>Settings</h2>
+        <p>Manage your account and workspace preferences.</p>
+    </div>
+
+    <div class="settings-layout">
+
+       
+<!-- SETTINGS NAVIGATION -->
+<aside class="settings-nav">
+    <h3>Account</h3>
+
+    <button type="button" class="settings-nav-item active"
+            data-settings-target="profileSettings">
+        <span>👤</span> Profile
+    </button>
+
+    <h3>Preferences</h3>
+
+    <button type="button" class="settings-nav-item"
+            data-settings-target="appearanceSettings">
+        <span>🎨</span> Appearance
+    </button>
+
+    <button type="button" class="settings-nav-item"
+            data-settings-target="analysisPreferencesSettings">
+        <span>🛰️</span> Analysis Preferences
+    </button>
+
+    <h3>Security</h3>
+
+    <button type="button" class="settings-nav-item"
+            data-settings-target="securitySettings">
+        <span>🔒</span> Account Security
+    </button>
+
+    <h3>Information</h3>
+
+    <button type="button" class="settings-nav-item"
+            data-settings-target="aboutSettings">
+        <span>ℹ️</span> About GeoVision AI
+    </button>
+</aside>
+
+
+        <!-- SETTINGS CONTENT -->
+        <div class="settings-content">
+
+<article class="settings-card" id="profileSettings">                <div class="settings-card-heading">
+                    <div>
+                        <h3>Profile Information</h3>
+                        <p>Your account information and profile details.</p>
+                    </div>
+                    <span class="settings-section-icon">👤</span>
+                </div>
+
+                <div class="settings-profile">
+                    <div class="settings-profile-avatar"
+                         id="settingsProfileAvatar">U</div>
+                    <div>
+                        <h4 id="settingsProfileName">User</h4>
+                        <p id="settingsProfileEmail">user@example.com</p>
+                        <span class="settings-account-label">
+                            GeoVision AI Account
+                        </span>
+                    </div>
+                </div>
+
+                <div class="settings-divider"></div>
+
+                <div class="settings-detail">
+                    <div>
+                        <span>Full Name</span>
+                        <strong id="settingsFullName">—</strong>
+                    </div>
+                    <div>
+                        <span>Email Address</span>
+                        <strong id="settingsEmail">—</strong>
+                    </div>
+                    <div>
+                        <span>Platform</span>
+                        <strong>GeoVision AI</strong>
+                    </div>
+                </div>
+            </article>
+
+<!-- APPEARANCE SETTINGS -->
+<article class="settings-card settings-appearance-card" id="appearanceSettings" hidden>
+
+    <div class="settings-card-heading">
+        <div>
+            <h3>Appearance</h3>
+            <p>Customize how GeoVision AI looks on your device.</p>
+        </div>
+        <span class="settings-section-icon">🎨</span>
+    </div>
+
+   
+<div class="appearance-toggle-row">
+    <div class="appearance-toggle-info">
+        <strong id="themeModeLabel">Dark Mode</strong>
+        <p id="themeModeDescription">
+            Switch between light and dark appearance.
+        </p>
+    </div>
+
+    <label class="theme-switch" for="themeToggle">
+        <input
+            type="checkbox"
+            id="themeToggle"
+            aria-label="Toggle dark mode"
+        >
+        <span class="theme-switch-slider"></span>
+    </label>
+</div>
+
+
+    <p class="appearance-note">
+        Your selected appearance will be remembered on this device.
+    </p>
+
+</article>
+
+<!-- ANALYSIS PREFERENCES -->
+<article class="settings-card" id="analysisPreferencesSettings" hidden>
+    <div class="settings-card-heading">
+        <div>
+            <h3>Analysis Preferences</h3>
+            <p>Information about your satellite analysis workspace.</p>
+        </div>
+        <span class="settings-section-icon">🛰️</span>
+    </div>
+
+    <div class="settings-detail">
+        <div>
+            <span>Analysis Platform</span>
+            <strong>GeoVision AI</strong>
+        </div>
+        <div>
+            <span>Image Analysis</span>
+            <strong>Satellite Imagery</strong>
+        </div>
+        <div>
+            <span>Detection Method</span>
+            <strong>Deep Learning</strong>
+        </div>
+    </div>
+
+    <p class="appearance-note">
+        Select your geographic location and observation dates
+        from the Satellite Analysis page.
+    </p>
+</article>
+
+<!-- ACCOUNT SECURITY -->
+<article class="settings-card" id="securitySettings" hidden>
+    <div class="settings-card-heading">
+        <div>
+            <h3>Account Security</h3>
+            <p>Information about your account protection.</p>
+        </div>
+        <span class="settings-section-icon">🔒</span>
+    </div>
+
+    <div class="settings-security-item">
+        <div>
+            <strong>Secure Authentication</strong>
+            <p>Your account uses the application's secure
+               authentication and session system.</p>
+        </div>
+        <span class="settings-security-status">Enabled</span>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div class="settings-security-item">
+        <div>
+            <strong>Password Protection</strong>
+            <p>Your password is protected using secure password hashing.</p>
+        </div>
+        <span class="settings-security-status">Enabled</span>
+    </div>
+
+    <p class="appearance-note">
+        Password changes are not available from this page yet.
+    </p>
+</article>
+
+<!-- ABOUT GEOVISION AI -->
+<article class="settings-card" id="aboutSettings" hidden>
+    <div class="settings-card-heading">
+        <div>
+            <h3>About GeoVision AI</h3>
+            <p>Learn more about this application.</p>
+        </div>
+        <span class="settings-section-icon">ℹ️</span>
+    </div>
+
+    <div class="settings-about-brand">
+        <div class="settings-about-icon">✦</div>
+        <div>
+            <h3>GeoVision AI</h3>
+            <p>Satellite Intelligence Platform</p>
+        </div>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div class="settings-detail">
+        <div>
+            <span>Application</span>
+            <strong>GeoVision AI</strong>
+        </div>
+        <div>
+            <span>Backend Framework</span>
+            <strong>FastAPI</strong>
+        </div>
+        <div>
+            <span>Core Technology</span>
+            <strong>Artificial Intelligence</strong>
+        </div>
+        <div>
+            <span>Project</span>
+            <strong>Human-Induced Change Detection</strong>
+        </div>
+    </div>
+</article>
+
+
+        </div>
+    </div>
+</section>
+
+
+                </main>
+
+                <footer class="footer">
             <p>
                 AI-Based Human-Induced Change Detection Using Satellite Images
             </p>
+
             <p>
                 Powered by FastAPI and Deep Learning
             </p>
         </footer>
 
+            </div>
+        </div>
+
     </main>
 
-    <!-- Application JavaScript Files -->
-    <!-- These files will be created in the following steps. -->
+    <!-- ================================================= -->
+    <!-- APPLICATION JAVASCRIPT -->
+    <!-- ================================================= -->
+
     <script src="js/api.js"></script>
+    <script src="js/auth.js"></script>
     <script src="js/map.js"></script>
     <script src="js/analysis.js"></script>
     <script src="js/history.js"></script>
     <script src="js/main.js"></script>
+
 </body>
 </html>

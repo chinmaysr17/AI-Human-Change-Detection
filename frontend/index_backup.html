@@ -1,0 +1,396 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>AI-Based Human-Induced Change Detection</title>
+
+    <!-- External CSS -->
+    <link rel="stylesheet" href="css/style.css">
+
+    <!-- Leaflet Map CSS -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <!-- Leaflet Map JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+    <main class="container">
+
+        <!-- HEADER -->
+        <header class="header">
+            <h1>AI-Based Human-Induced Change Detection</h1>
+            <p>
+                Satellite Image Analysis Using Deep Learning
+            </p>
+        </header>
+
+        <!-- LOCATION SELECTION -->
+        <section class="location-section">
+            <h2>1. Location and Date Selection</h2>
+
+            <p class="location-description">
+                Search for a location or select a point directly on the
+                map. Choose the before and after dates to prepare an
+                analysis selection.
+            </p>
+
+            <div class="input-row">
+                <input
+                    type="text"
+                    id="locationSearchInput"
+                    placeholder="Search for a location..."
+                    aria-label="Search location"
+                >
+
+                <button type="button" id="locationSearchButton">
+                    Search Location
+                </button>
+            </div>
+
+            <div id="locationSearchResults"></div>
+
+            <div id="locationMap" aria-label="Location selection map"></div>
+
+            <div class="location-details">
+                <div class="location-detail">
+                    <strong>Selected Latitude</strong>
+                    <span id="selectedLatitude">Not selected</span>
+                </div>
+
+                <div class="location-detail">
+                    <strong>Selected Longitude</strong>
+                    <span id="selectedLongitude">Not selected</span>
+                </div>
+
+                <div class="location-detail">
+                    <strong>Analysis Radius</strong>
+                    <span id="selectedRadius">5 km</span>
+                </div>
+            </div>
+
+            <div class="date-selection-section">
+                <h3>Before and After Dates</h3>
+
+                <p class="location-description">
+                    Select the dates you want to compare. The before
+                    date must be earlier than the after date.
+                </p>
+
+                <div class="date-input-grid">
+                    <div class="date-input-card">
+                        <label for="beforeDate">Before Date</label>
+                        <input type="date" id="beforeDate">
+                        <small>Earlier observation date</small>
+                    </div>
+
+                    <div class="date-input-card">
+                        <label for="afterDate">After Date</label>
+                        <input type="date" id="afterDate">
+                        <small>Later observation date</small>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    id="validateAnalysisButton"
+                    class="date-action-button"
+                >
+                    Validate Selection
+                </button>
+
+                <div
+                    id="locationStatus"
+                    class="location-status"
+                    role="status"
+                    aria-live="polite"
+                >
+                    Select a location and both dates to continue.
+                </div>
+
+                <div
+                    id="dateSelectionStatus"
+                    class="status"
+                    role="status"
+                    aria-live="polite"
+                ></div>
+            </div>
+        </section>
+
+        <!-- ANALYSIS INPUT -->
+        <section class="input-section">
+            <h2>2. Satellite Image Analysis</h2>
+
+            <p>
+                Enter the filename of an image supported by the
+                backend dataset and run the analysis.
+            </p>
+
+            <label for="filename">Dataset Image Filename</label>
+
+            <div class="input-row">
+                <input
+                    type="text"
+                    id="filename"
+                    value="test_1.png"
+                    placeholder="Example: test_1.png"
+                >
+
+                <button type="button" id="analyzeButton">
+                    Analyze Image
+                </button>
+            </div>
+
+            <div
+                id="status"
+                class="status"
+                role="status"
+                aria-live="polite"
+            ></div>
+
+            <p class="location-description">
+                Note: The current analysis uses an existing dataset
+                image. Selecting a map location and dates does not
+                automatically retrieve satellite imagery.
+            </p>
+        </section>
+
+        <!-- MODEL INFORMATION -->
+        <section class="model-section">
+            <h2>3. Model Information</h2>
+
+            <div class="model-grid">
+                <div class="model-box">
+                    <span>Model Name</span>
+                    <strong id="modelName">Loading...</strong>
+                </div>
+
+                <div class="model-box">
+                    <span>Architecture</span>
+                    <strong id="modelArchitecture">Loading...</strong>
+                </div>
+
+                <div class="model-box">
+                    <span>Task</span>
+                    <strong id="modelTask">Loading...</strong>
+                </div>
+
+                <div class="model-box">
+                    <span>Parameters</span>
+                    <strong id="modelParameters">Loading...</strong>
+                </div>
+
+                <div class="model-box">
+                    <span>Input Information</span>
+                    <strong id="modelInput">Loading...</strong>
+                </div>
+
+                <div class="model-box">
+                    <span>Dataset</span>
+                    <strong id="modelDataset">Loading...</strong>
+                </div>
+
+                <div class="model-box">
+                    <span>Threshold</span>
+                    <strong id="modelThreshold">Loading...</strong>
+                </div>
+
+                <div class="model-box">
+                    <span>F1 Score</span>
+                    <strong id="modelF1">Loading...</strong>
+                </div>
+            </div>
+
+            <div id="modelNote" class="model-note">
+                Model information will appear here when available.
+            </div>
+        </section>
+
+        <!-- ANALYSIS STATISTICS -->
+        <section>
+            <h2>4. Analysis Statistics</h2>
+
+            <div class="stats-section">
+                <div class="stat-card">
+                    <h3>Change Percentage</h3>
+                    <p id="changePercentage">--</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Changed Pixels</h3>
+                    <p id="changedPixels">--</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Total Pixels</h3>
+                    <p id="totalPixels">--</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Mean Prediction</h3>
+                    <p id="meanPrediction">--</p>
+                </div>
+
+                <div class="stat-card">
+                    <h3>Detection Threshold</h3>
+                    <p id="threshold">--</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- DETECTED REGIONS -->
+        <section class="regions-section">
+            <div class="regions-header">
+                <h2>5. Detected Change Regions</h2>
+
+                <span class="region-count" id="regionCount">
+                    0 regions
+                </span>
+            </div>
+
+            <div id="regionsContainer">
+                <div class="no-regions">
+                    Run an image analysis to view detected regions.
+                </div>
+            </div>
+        </section>
+
+        <!-- IMAGE COMPARISON -->
+        <section class="image-section">
+            <h2>6. Satellite Image Comparison</h2>
+
+            <div class="image-grid">
+                <div class="image-card">
+                    <h3>Before Image</h3>
+
+                    <img
+                        id="beforeImage"
+                        src=""
+                        alt="Satellite image before the change"
+                        hidden
+                    >
+
+                    <div class="no-regions" id="beforeImagePlaceholder">
+                        Before image will appear here when available.
+                    </div>
+                </div>
+
+                <div class="image-card">
+                    <h3>After Image / Detected Region</h3>
+
+                    <div class="region-image-wrapper">
+                        <img
+                            id="afterRegionImage"
+                            src=""
+                            alt="Satellite image showing the detected region"
+                            hidden
+                        >
+
+                        <canvas id="regionCanvas"></canvas>
+                    </div>
+
+                    <div
+                        class="no-regions"
+                        id="afterImagePlaceholder"
+                    >
+                        After image will appear here when available.
+                    </div>
+
+                    <div class="region-legend">
+                        Detected regions will be highlighted when
+                        supported by the analysis response.
+                    </div>
+                </div>
+
+                <div class="image-card">
+                    <h3>Change Map</h3>
+
+                    <img
+                        id="changeMap"
+                        src=""
+                        alt="Generated change detection map"
+                        hidden
+                    >
+
+                    <div class="no-regions" id="changeMapPlaceholder">
+                        Change map will appear here after analysis.
+                    </div>
+                </div>
+
+                <div class="image-card">
+                    <h3>Change Overlay</h3>
+
+                    <img
+                        id="changeOverlay"
+                        src=""
+                        alt="Satellite image with change detection overlay"
+                        hidden
+                    >
+
+                    <div
+                        class="no-regions"
+                        id="changeOverlayPlaceholder"
+                    >
+                        Change overlay will appear here when available.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ANALYSIS HISTORY -->
+        <section class="history-section">
+            <div class="history-header">
+                <h2>7. Analysis History</h2>
+
+                <button
+                    type="button"
+                    id="refreshHistoryButton"
+                    class="history-button"
+                >
+                    Refresh History
+                </button>
+            </div>
+
+            <div
+                id="analysisHistoryStatus"
+                class="history-status"
+                role="status"
+                aria-live="polite"
+            >
+                Analysis history will appear here.
+            </div>
+
+            <div id="analysisHistoryContainer">
+                <div class="history-empty">
+                    No history loaded yet.
+                </div>
+            </div>
+        </section>
+
+        <!-- FOOTER -->
+        <footer class="footer">
+            <p>
+                AI-Based Human-Induced Change Detection Using Satellite Images
+            </p>
+            <p>
+                Powered by FastAPI and Deep Learning
+            </p>
+        </footer>
+
+    </main>
+
+    <!-- Application JavaScript Files -->
+    <!-- These files will be created in the following steps. -->
+    <script src="js/api.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/analysis.js"></script>
+    <script src="js/history.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

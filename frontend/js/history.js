@@ -41,14 +41,16 @@ function createHistoryCard(record, index) {
     card.className = "history-card";
 
     const heading = document.createElement("h3");
+
     heading.textContent =
         record.filename ||
         record.image_filename ||
-        `Analysis ${index + 1}`;
+        `Analysis ${record.id || index + 1}`;
 
     card.appendChild(heading);
 
     const details = [
+        ["Record ID", record.id],
         ["Status", record.status],
         ["Location", record.location_name],
         ["Latitude", record.latitude],
@@ -70,6 +72,7 @@ function createHistoryCard(record, index) {
         const valueElement = document.createElement("span");
 
         labelElement.textContent = `${label}: `;
+
         valueElement.textContent =
             typeof value === "object"
                 ? JSON.stringify(value)
@@ -80,8 +83,8 @@ function createHistoryCard(record, index) {
         card.appendChild(row);
     });
 
-    // Show other record fields if the backend uses a different schema.
     const knownKeys = new Set([
+        "id",
         "filename",
         "image_filename",
         "status",
@@ -93,7 +96,8 @@ function createHistoryCard(record, index) {
         "after_date",
         "change_percentage",
         "created_at",
-        "timestamp"
+        "timestamp",
+        "imagery_retrieved"
     ]);
 
     const otherEntries = Object.entries(record).filter(
@@ -119,6 +123,21 @@ function createHistoryCard(record, index) {
         card.appendChild(row);
     });
 
+    if (record.imagery_retrieved !== undefined) {
+        const row = document.createElement("p");
+        const labelElement = document.createElement("strong");
+        const valueElement = document.createElement("span");
+
+        labelElement.textContent = "Imagery Retrieved: ";
+        valueElement.textContent = record.imagery_retrieved
+            ? "Yes"
+            : "No";
+
+        row.appendChild(labelElement);
+        row.appendChild(valueElement);
+        card.appendChild(row);
+    }
+
     return card;
 }
 
@@ -136,7 +155,6 @@ function displayAnalysisHistory(data) {
 
     container.replaceChildren();
 
-    // Support either a direct array or a common object wrapper.
     let records;
 
     if (Array.isArray(data)) {
@@ -183,25 +201,62 @@ function displayAnalysisHistory(data) {
 
 
 // =====================================================
+// CLEAR HISTORY ON LOGOUT
+// =====================================================
+
+function clearAnalysisHistory() {
+    const container = document.getElementById(
+        "analysisHistoryContainer"
+    );
+
+    if (container) {
+        container.replaceChildren();
+
+        const message = document.createElement("div");
+        message.className = "history-empty";
+        message.textContent = "Please log in to view your analysis history.";
+
+        container.appendChild(message);
+    }
+
+    showHistoryStatus("Login required to access analysis history.");
+}
+
+
+// =====================================================
 // LOAD ANALYSIS HISTORY FROM THE BACKEND
 // =====================================================
 
 async function loadAnalysisHistory() {
     const button = document.getElementById("refreshHistoryButton");
 
+    // Do not request protected history without authentication.
+    if (!window.currentUser) {
+        clearAnalysisHistory();
+        return;
+    }
+
     if (button) {
         button.disabled = true;
         button.textContent = "Loading...";
     }
 
-    showHistoryStatus("Loading analysis history...");
+    showHistoryStatus("Loading your analysis history...");
 
     try {
         const data = await getAnalysisHistory();
 
+        // Check that the user is still logged in.
+        if (!window.currentUser) {
+            clearAnalysisHistory();
+            return;
+        }
+
         displayAnalysisHistory(data);
 
-        showHistoryStatus("Analysis history loaded successfully.");
+        showHistoryStatus(
+            "Your analysis history loaded successfully."
+        );
     } catch (error) {
         console.error("Could not load analysis history:", error);
 
@@ -215,8 +270,8 @@ async function loadAnalysisHistory() {
             const errorMessage = document.createElement("div");
             errorMessage.className = "history-empty";
             errorMessage.textContent =
-                "History could not be loaded. Check that the backend is running.";
-
+                "History could not be loaded. Please try again.";
+            
             container.appendChild(errorMessage);
         }
 
@@ -249,6 +304,6 @@ document.addEventListener("DOMContentLoaded", () => {
         );
     }
 
-    // Load history automatically when the page opens.
-    loadAnalysisHistory();
+    // History will be loaded by auth.js after successful login.
+    clearAnalysisHistory();
 });

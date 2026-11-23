@@ -1,0 +1,16 @@
+MINING U-NET V3 VALIDATION EVALUATION
+==================================================
+Checkpoint: mining_unet_v3_best.keras
+Validation tiles: 1307, 24, 867, 930
+Selected threshold: 0.7
+
+threshold: 0.7
+TP: 36632
+FP: 37533
+FN: 25932
+precision: 0.49392570619564485
+recall: 0.5855124352662873
+F1: 0.5358336563567349
+IoU: 0.3659650139364816
+Dice: 0.5358336563567349
+predicted_coverage_percent: 28.291702270507812

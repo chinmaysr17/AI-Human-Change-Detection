@@ -1,21 +1,28 @@
 import base64
 import io
 import json
-import os
-import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
 
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
 from PIL import Image
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 from tensorflow.keras.models import load_model
 
-from src.inference.change_detector import run_change_detection
+from backend.app.auth_router import (
+    get_current_user,
+    router as auth_router,
+)
+from backend.app.database import get_db
+from backend.app.models import AnalysisHistory
 from src.data.image_loader import load_image_pair
 from src.data.sentinel2_service import retrieve_sentinel2_pair
+from src.inference.change_detector import run_change_detection
 
 
 # =========================================================
@@ -71,57 +78,38 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=[
+        "http://127.0.0.1:5501",
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "X-CSRF-Token"],
 )
+
+# =========================================================
+# AUTHENTICATION ROUTER
+# =========================================================
+
+app.include_router(auth_router)
 
 
 # =========================================================
-# PROJECT PATHS AND SQLITE HISTORY
+# PROJECT PATHS AND POSTGRESQL
 # =========================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
 DATA_DIRECTORY = PROJECT_ROOT / "data"
 DATA_DIRECTORY.mkdir(parents=True, exist_ok=True)
-DATABASE_PATH = DATA_DIRECTORY / "analysis_history.db"
 
-SENTINEL_MODEL_PATH = PROJECT_ROOT / "models" / "change_detection_cnn_final.keras"
+SENTINEL_MODEL_PATH = (
+    PROJECT_ROOT / "models" / "change_detection_cnn_final.keras"
+)
+
 SENTINEL_IMAGE_SIZE = (256, 256)
 SENTINEL_THRESHOLD = 0.50
+
 _sentinel_model = None
-
-
-def get_database_connection():
-    """Create a connection to the local analysis-history database."""
-    connection = sqlite3.connect(str(DATABASE_PATH), timeout=10)
-    connection.row_factory = sqlite3.Row
-    return connection
-
-
-def initialize_history_database():
-    """Create the analysis history table if it does not exist."""
-    with get_database_connection() as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS analysis_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                latitude REAL NOT NULL,
-                longitude REAL NOT NULL,
-                radius_km REAL NOT NULL,
-                before_date TEXT NOT NULL,
-                after_date TEXT NOT NULL,
-                created_at TEXT NOT NULL,
-                status TEXT NOT NULL DEFAULT 'Pending Analysis',
-                imagery_retrieved INTEGER NOT NULL DEFAULT 0
-            )
-            """
-        )
-        connection.commit()
-
-
-initialize_history_database()
 
 
 # =========================================================
@@ -146,8 +134,13 @@ def health_check():
     "/api/analysis-selection",
     response_model=AnalysisSelectionResponse,
 )
-def validate_analysis_selection(selection: AnalysisSelectionRequest):
+def validate_analysis_selection(
+    selection: AnalysisSelectionRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
     """Validate and save a location/date selection without downloading imagery."""
+
     if selection.after_date <= selection.before_date:
         raise HTTPException(
             status_code=422,
@@ -167,27 +160,29 @@ def validate_analysis_selection(selection: AnalysisSelectionRequest):
         )
 
     created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    with get_database_connection() as connection:
-        cursor = connection.execute(
-            """
-            INSERT INTO analysis_history (
-                latitude, longitude, radius_km, before_date, after_date,
-                created_at, status, imagery_retrieved
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                selection.latitude,
-                selection.longitude,
-                selection.radius_km,
-                selection.before_date.isoformat(),
-                selection.after_date.isoformat(),
-                created_at,
-                "Pending Analysis",
-                0,
-            ),
+
+    record = AnalysisHistory(
+        latitude=selection.latitude,
+        longitude=selection.longitude,
+        radius_km=selection.radius_km,
+        before_date=selection.before_date.isoformat(),
+        after_date=selection.after_date.isoformat(),
+        created_at=created_at,
+        status="Pending Analysis",
+        imagery_retrieved=0,
+        user_id=current_user.id,
+    )
+
+    try:
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save the analysis selection.",
         )
-        record_id = cursor.lastrowid
-        connection.commit()
 
     return {
         "status": "valid",
@@ -201,7 +196,7 @@ def validate_analysis_selection(selection: AnalysisSelectionRequest):
         "before_date": selection.before_date,
         "after_date": selection.after_date,
         "imagery_retrieved": False,
-        "record_id": record_id,
+        "record_id": record.id,
         "created_at": created_at,
         "analysis_status": "Pending Analysis",
     }
@@ -212,40 +207,43 @@ def validate_analysis_selection(selection: AnalysisSelectionRequest):
 # =========================================================
 
 @app.get("/api/analysis-history")
-def get_analysis_history():
-    """Return saved analysis selections, newest first."""
+def get_analysis_history(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Return the logged-in user's saved analysis selections, newest first."""
+
     try:
-        with get_database_connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT id, latitude, longitude, radius_km, before_date,
-                       after_date, created_at, status, imagery_retrieved
-                FROM analysis_history
-                ORDER BY id DESC
-                """
-            ).fetchall()
+        rows = db.scalars(
+            select(AnalysisHistory)
+            .where(AnalysisHistory.user_id == current_user.id)
+            .order_by(AnalysisHistory.id.desc())
+        ).all()
+
+        records = [
+            {
+                "id": row.id,
+                "latitude": row.latitude,
+                "longitude": row.longitude,
+                "radius_km": row.radius_km,
+                "before_date": row.before_date,
+                "after_date": row.after_date,
+                "created_at": row.created_at,
+                "status": row.status,
+                "imagery_retrieved": bool(row.imagery_retrieved),
+            }
+            for row in rows
+        ]
 
         return {
-            "count": len(rows),
-            "records": [
-                {
-                    "id": row["id"],
-                    "latitude": row["latitude"],
-                    "longitude": row["longitude"],
-                    "radius_km": row["radius_km"],
-                    "before_date": row["before_date"],
-                    "after_date": row["after_date"],
-                    "created_at": row["created_at"],
-                    "status": row["status"],
-                    "imagery_retrieved": bool(row["imagery_retrieved"]),
-                }
-                for row in rows
-            ],
+            "count": len(records),
+            "records": records,
         }
-    except sqlite3.Error as error:
+
+    except SQLAlchemyError:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve analysis history: {error}",
+            detail="Failed to retrieve analysis history.",
         )
 
 
@@ -272,10 +270,10 @@ def get_model_metadata():
         return load_model_metadata()
     except FileNotFoundError as error:
         raise HTTPException(status_code=404, detail=str(error))
-    except Exception as error:
+    except Exception:
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to load model metadata: {error}",
+            detail="Failed to load model metadata.",
         )
 
 
@@ -356,7 +354,9 @@ def get_sentinel_model():
 
     if _sentinel_model is None:
         if not SENTINEL_MODEL_PATH.exists():
-            raise FileNotFoundError(f"Trained CNN model not found: {SENTINEL_MODEL_PATH}")
+            raise FileNotFoundError(
+                f"Trained CNN model not found: {SENTINEL_MODEL_PATH}"
+            )
         _sentinel_model = load_model(SENTINEL_MODEL_PATH, compile=False)
 
     return _sentinel_model
@@ -380,8 +380,13 @@ def load_sentinel_image(image_path):
 # =========================================================
 
 @app.post("/api/analyze-location")
-def analyze_location(selection: AnalysisSelectionRequest):
+def analyze_location(
+    selection: AnalysisSelectionRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
     """Retrieve Sentinel-2 imagery and run an explicitly experimental CNN prediction."""
+
     if selection.after_date <= selection.before_date:
         raise HTTPException(
             status_code=422,
@@ -395,28 +400,31 @@ def analyze_location(selection: AnalysisSelectionRequest):
         )
 
     created_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    with get_database_connection() as connection:
-        cursor = connection.execute(
-            """
-            INSERT INTO analysis_history (
-                latitude, longitude, radius_km, before_date, after_date,
-                created_at, status, imagery_retrieved
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                selection.latitude,
-                selection.longitude,
-                selection.radius_km,
-                selection.before_date.isoformat(),
-                selection.after_date.isoformat(),
-                created_at,
-                "Retrieving Sentinel-2 imagery",
-                0,
-            ),
-        )
-        record_id = cursor.lastrowid
-        connection.commit()
 
+    record = AnalysisHistory(
+        latitude=selection.latitude,
+        longitude=selection.longitude,
+        radius_km=selection.radius_km,
+        before_date=selection.before_date.isoformat(),
+        after_date=selection.after_date.isoformat(),
+        created_at=created_at,
+        status="Retrieving Sentinel-2 imagery",
+        imagery_retrieved=0,
+        user_id=current_user.id,
+    )
+
+    try:
+        db.add(record)
+        db.commit()
+        db.refresh(record)
+    except SQLAlchemyError:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create the analysis history record.",
+        )
+
+    record_id = record.id
     imagery_retrieved = False
 
     try:
@@ -426,11 +434,11 @@ def analyze_location(selection: AnalysisSelectionRequest):
             radius_km=selection.radius_km,
             before_date=datetime.combine(
                 selection.before_date,
-                datetime.min.time()
+                datetime.min.time(),
             ),
             after_date=datetime.combine(
                 selection.after_date,
-                datetime.min.time()
+                datetime.min.time(),
             ),
             record_id=record_id,
         )
@@ -463,16 +471,18 @@ def analyze_location(selection: AnalysisSelectionRequest):
         ).save(result_directory / "change_probability.png")
         Image.fromarray(change_mask * 255).save(result_directory / "change_mask.png")
 
-        with get_database_connection() as connection:
-            connection.execute(
-                """
-                UPDATE analysis_history
-                SET status = ?, imagery_retrieved = ?
-                WHERE id = ?
-                """,
-                ("Completed - Experimental prediction", 1, record_id),
+        record_to_update = db.scalar(
+            select(AnalysisHistory).where(
+                AnalysisHistory.id == record_id,
+                AnalysisHistory.user_id == current_user.id,
             )
-            connection.commit()
+        )
+        if record_to_update is None:
+            raise RuntimeError("Analysis history record could not be found.")
+
+        record_to_update.status = "Completed - Experimental prediction"
+        record_to_update.imagery_retrieved = 1
+        db.commit()
 
         return {
             "record_id": record_id,
@@ -499,19 +509,27 @@ def analyze_location(selection: AnalysisSelectionRequest):
         }
 
     except Exception as error:
-        with get_database_connection() as connection:
-            connection.execute(
-                """
-                UPDATE analysis_history
-                SET status = ?, imagery_retrieved = ?
-                WHERE id = ?
-                """,
-                (f"Failed: {str(error)[:400]}", int(imagery_retrieved), record_id),
+        db.rollback()
+
+        try:
+            record_to_update = db.scalar(
+                select(AnalysisHistory).where(
+                    AnalysisHistory.id == record_id,
+                    AnalysisHistory.user_id == current_user.id,
+                )
             )
-            connection.commit()
+            if record_to_update is not None:
+                record_to_update.status = f"Failed: {str(error)[:400]}"
+                record_to_update.imagery_retrieved = int(imagery_retrieved)
+                db.commit()
+        except SQLAlchemyError:
+            db.rollback()
 
         if isinstance(error, (ValueError, FileNotFoundError)):
             raise HTTPException(status_code=400, detail=str(error))
+
+        if isinstance(error, HTTPException):
+            raise error
 
         raise HTTPException(
             status_code=500,

@@ -18,6 +18,10 @@ async function apiRequest(endpoint, options = {}) {
     try {
         response = await fetch(url, {
             ...options,
+
+            // Required for HttpOnly authentication cookies
+            credentials: "include",
+
             headers: {
                 "Content-Type": "application/json",
                 ...(options.headers || {})
@@ -53,6 +57,70 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     return data;
+}
+
+
+// =====================================================
+// AUTHENTICATION
+// Backend: /api/auth
+// =====================================================
+
+// REGISTER USER
+
+async function registerUser(userData) {
+    if (!userData || typeof userData !== "object") {
+        throw new Error("Invalid registration details.");
+    }
+
+    if (!userData.full_name || !userData.email || !userData.password) {
+        throw new Error("Please provide your name, email and password.");
+    }
+
+    return await apiRequest("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+            full_name: userData.full_name.trim(),
+            email: userData.email.trim(),
+            password: userData.password
+        })
+    });
+}
+
+
+// LOGIN USER
+
+async function loginUser(credentials) {
+    if (!credentials || typeof credentials !== "object") {
+        throw new Error("Invalid login details.");
+    }
+
+    if (!credentials.email || !credentials.password) {
+        throw new Error("Please enter your email and password.");
+    }
+
+    return await apiRequest("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+            email: credentials.email.trim(),
+            password: credentials.password
+        })
+    });
+}
+
+
+// LOGOUT USER
+
+async function logoutUser() {
+    return await apiRequest("/api/auth/logout", {
+        method: "POST"
+    });
+}
+
+
+// GET CURRENT LOGGED-IN USER
+
+async function getCurrentUser() {
+    return await apiRequest("/api/auth/me");
 }
 
 
@@ -99,7 +167,7 @@ async function saveAnalysisSelection(selection) {
 
 
 // =====================================================
-// NEW: LOCATION-BASED SENTINEL-2 ANALYSIS
+// LOCATION-BASED SENTINEL-2 ANALYSIS
 // Backend: POST /api/analyze-location
 // =====================================================
 
@@ -136,7 +204,7 @@ async function analyzeLocation(selection) {
 
 
 // =====================================================
-// GET ANALYSIS HISTORY
+// GET USER-SPECIFIC ANALYSIS HISTORY
 // =====================================================
 
 async function getAnalysisHistory() {

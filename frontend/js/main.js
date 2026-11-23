@@ -69,6 +69,7 @@ async function loadModelInformation() {
         setText("modelNote", scope.note);
 
         console.log("Model information loaded successfully.");
+
     } catch (error) {
         console.error("Failed to load model information:", error);
 
@@ -102,5 +103,6 @@ function initializeApplication() {
 
 document.addEventListener(
     "DOMContentLoaded",
-    initializeApplication
+    initializeApplication,
+    { once: true }
 );

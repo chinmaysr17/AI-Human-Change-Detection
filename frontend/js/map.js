@@ -295,16 +295,13 @@ function getAnalysisResultsContainer() {
     container.style.border = "1px solid #e5e7eb";
     container.style.display = "none";
 
-    const mapElement = document.getElementById("locationMap");
+    const locationSection = document.getElementById("locationSection");
 
-    if (mapElement && mapElement.parentElement) {
-        mapElement.parentElement.insertAdjacentElement(
-            "afterend",
-            container
-        );
-    } else {
-        document.body.appendChild(container);
-    }
+if (locationSection) {
+    locationSection.appendChild(container);
+} else {
+    console.error("Satellite Analysis section not found.");
+}
 
     return container;
 }
@@ -428,6 +425,26 @@ function displayAnalysisResults(result) {
 // =====================================================
 
 async function validateAnalysisSelection() {
+
+    // Require authentication before starting satellite analysis.
+    if (!window.currentUser) {
+        showSelectionStatus(
+            "Please log in before starting satellite image analysis.",
+            true
+        );
+
+        const authSection = document.getElementById("authSection");
+
+        if (authSection) {
+            authSection.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+
+        return;
+    }
+
     const beforeDate = document.getElementById("beforeDate").value;
     const afterDate = document.getElementById("afterDate").value;
 
