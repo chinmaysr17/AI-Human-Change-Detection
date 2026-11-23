@@ -1,6 +1,7 @@
 import base64
 import io
 import json
+import os
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -9,7 +10,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from tensorflow.keras.models import load_model
@@ -76,11 +77,14 @@ app = FastAPI(
     version="1.3.0",
 )
 
+FRONTEND_ORIGIN = os.getenv(
+    "FRONTEND_ORIGIN",
+    "http://127.0.0.1:5501",
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5501",
-    ],
+    allow_origins=[FRONTEND_ORIGIN],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "X-CSRF-Token"],
@@ -122,8 +126,20 @@ def root():
 
 
 @app.get("/health")
-def health_check():
-    return {"status": "healthy"}
+def health_check(db: Session = Depends(get_db)):
+    """Report API readiness only when the PostgreSQL connection is available."""
+    try:
+        db.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=503,
+            detail="Database connection is unavailable.",
+        )
+
+    return {
+        "status": "healthy",
+        "database": "connected",
+    }
 
 
 # =========================================================
