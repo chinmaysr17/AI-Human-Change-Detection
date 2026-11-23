@@ -350,9 +350,29 @@ pip install -r requirements.txt
 
 ### Configure environment variables
 
-Create a `.env` file in the project root and configure the required satellite data service credentials.
+Copy the example configuration into a project-root `.env` file.
 
-Do not commit API credentials, passwords, or private configuration files to GitHub.
+Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Update the placeholders in `.env` with your own values:
+
+| Variable | Purpose |
+|---|---|
+| `DB_HOST` | PostgreSQL server host |
+| `DB_PORT` | PostgreSQL server port (usually `5432`) |
+| `DB_NAME` | Existing project database name |
+| `DB_USER` | PostgreSQL username |
+| `DB_PASSWORD` | PostgreSQL password |
+| `COPERNICUS_CLIENT_ID` | Copernicus Data Space client ID |
+| `COPERNICUS_CLIENT_SECRET` | Copernicus Data Space client secret |
+| `FRONTEND_ORIGIN` | Frontend origin (default `http://127.0.0.1:5501`) |
+| `COOKIE_SECURE` | Set to `true` when using HTTPS; keep `false` for local HTTP |
+
+The PostgreSQL database named by `DB_NAME` must already exist. Keep your real `.env` file private; never commit credentials or passwords to GitHub.
 
 ## 15. Running the Application
 
