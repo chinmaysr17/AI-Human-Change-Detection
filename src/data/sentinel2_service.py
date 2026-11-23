@@ -2,14 +2,14 @@
 import os
 import io
 import json
-import math
 import tarfile
 from pathlib import Path
 from datetime import datetime, timedelta
-
+from pyproj import Transformer
+import rasterio
+from rasterio.io import MemoryFile
 import requests
 import numpy as np
-from PIL import Image
 from dotenv import load_dotenv
 
 
@@ -60,17 +60,21 @@ def get_access_token():
 
     return response.json()["access_token"]
 
-
 # ==================================================
 # ACQUISITION SELECTION
 # ==================================================
 
-def select_closest_tile(tiles, target_date):
-    """
-    Select the acquisition closest to the requested date.
+MAX_CLOUD_COVERAGE = 10.0
 
-    If two acquisitions have the same date distance,
-    prefer the one with lower cloud coverage.
+
+def select_closest_tile(
+    tiles,
+    target_date,
+    max_cloud_coverage=MAX_CLOUD_COVERAGE,
+):
+    """
+    Select the nearest Sentinel-2 acquisition that meets
+    the maximum cloud-coverage threshold.
     """
 
     if not tiles:
@@ -78,102 +82,154 @@ def select_closest_tile(tiles, target_date):
             "No Sentinel-2 acquisition tiles were returned."
         )
 
-    def tile_sort_key(tile):
+    eligible_tiles = []
 
-        date_string = tile.get("date")
-
-        if not date_string:
-            return float("inf"), float("inf")
-
+    for tile in tiles:
         try:
+            date_string = tile.get("date")
+
+            if not date_string:
+                continue
+
             acquisition_date = datetime.fromisoformat(
-                date_string.replace("Z", "")
+                date_string.replace("Z", "+00:00")
             )
 
-            date_difference = abs(
-                (acquisition_date - target_date).total_seconds()
-            )
+            comparison_target = target_date
+
+            if comparison_target.tzinfo is None:
+                comparison_target = comparison_target.replace(
+                    tzinfo=acquisition_date.tzinfo
+                )
+
+            elif acquisition_date.tzinfo is None:
+                acquisition_date = acquisition_date.replace(
+                    tzinfo=comparison_target.tzinfo
+                )
 
             cloud_coverage = float(
                 tile.get("cloudCoverage", 100)
             )
 
-            return date_difference, cloud_coverage
+            if not 0 <= cloud_coverage <= max_cloud_coverage:
+                continue
+
+            date_difference = abs(
+                (
+                    acquisition_date - comparison_target
+                ).total_seconds()
+            )
+
+            eligible_tiles.append(
+                (date_difference, cloud_coverage, tile)
+            )
 
         except (ValueError, TypeError):
-            return float("inf"), float("inf")
+            continue
 
-    selected_tile = min(
-        tiles,
-        key=tile_sort_key,
-    )
-
-    if not selected_tile.get("date"):
+    if not eligible_tiles:
         raise RuntimeError(
-            "Selected acquisition does not contain a valid date."
+            f"No Sentinel-2 acquisition found with cloud "
+            f"coverage at or below {max_cloud_coverage}%."
         )
 
-    return selected_tile
+    eligible_tiles.sort(
+        key=lambda item: (item[0], item[1])
+    )
 
+    return eligible_tiles[0][2]
 
 # ==================================================
-# IMAGE VALIDATION
+# GEOTIFF VALIDATION
 # ==================================================
 
-def validate_image(image_bytes):
-    """Validate downloaded satellite imagery."""
+OUTPUT_CRS = "EPSG:32643"
+OUTPUT_WIDTH = 1000
+OUTPUT_HEIGHT = 1000
+NODATA_VALUE = -9999.0
+
+
+def validate_geotiff(image_bytes):
+    """Validate a georeferenced 3-band Float32 GeoTIFF."""
 
     try:
-        image = Image.open(
-            io.BytesIO(image_bytes)
-        ).convert("RGB")
+        with MemoryFile(image_bytes) as memfile:
+            with memfile.open() as dataset:
+                if dataset.driver != "GTiff":
+                    raise RuntimeError(
+                        f"Expected GeoTIFF, received {dataset.driver}."
+                    )
 
-        image.load()
+                if (dataset.width, dataset.height) != (
+                    OUTPUT_WIDTH,
+                    OUTPUT_HEIGHT,
+                ):
+                    raise RuntimeError(
+                        "Unexpected GeoTIFF dimensions: "
+                        f"{dataset.width} x {dataset.height}."
+                    )
 
+                if dataset.count != 3:
+                    raise RuntimeError(
+                        f"Expected 3 bands, received {dataset.count}."
+                    )
+                if any(dtype != "float32" for dtype in dataset.dtypes):
+                     raise RuntimeError(
+                         f"Expected Float32 bands, received {dataset.dtypes}."
+                    )
+
+                if dataset.crs is None:
+                    raise RuntimeError(
+                        "GeoTIFF has no CRS; refusing ungeoreferenced imagery."
+                    )
+
+                if dataset.crs.to_string() != OUTPUT_CRS:
+                    raise RuntimeError(
+                        f"Unexpected CRS: {dataset.crs}; expected {OUTPUT_CRS}."
+                    )
+
+                if dataset.nodata is None:
+                    raise RuntimeError(
+                        "GeoTIFF does not declare a NoData value."
+                    )
+
+                if not np.isclose(dataset.nodata, NODATA_VALUE):
+                    raise RuntimeError(
+                        f"Unexpected NoData value: {dataset.nodata}."
+                    )
+
+                data = dataset.read(masked=True)
+                valid = np.ma.compressed(data)
+
+                if valid.size == 0:
+                    raise RuntimeError("GeoTIFF contains no valid pixels.")
+
+                if not np.isfinite(valid).all():
+                    raise RuntimeError(
+                        "GeoTIFF contains non-finite valid pixel values."
+                    )
+
+                if np.ma.getmaskarray(data).all():
+                    raise RuntimeError("All GeoTIFF pixels are NoData.")
+
+                return {
+                    "width": dataset.width,
+                    "height": dataset.height,
+                    "count": dataset.count,
+                    "crs": dataset.crs.to_string(),
+                    "transform": list(dataset.transform)[:6],
+                    "bounds": list(dataset.bounds),
+                    "resolution": list(dataset.res),
+                    "nodata": float(dataset.nodata),
+                    "dtype": dataset.dtypes[0],
+                }
+
+    except RuntimeError:
+        raise
     except Exception as exc:
         raise RuntimeError(
-            f"Invalid image returned by Sentinel Hub: {exc}"
-        )
-
-    pixels = np.asarray(image)
-
-    if image.size != (512, 512):
-        raise RuntimeError(
-            f"Unexpected image dimensions: {image.size}"
-        )
-
-    if not np.isfinite(pixels).all():
-        raise RuntimeError(
-            "Image contains invalid pixel values."
-        )
-
-    if pixels.max() == 0:
-        raise RuntimeError(
-            "Sentinel Hub returned a completely black image."
-        )
-
-    unique_colors = np.unique(
-        pixels.reshape(-1, 3),
-        axis=0,
-    ).shape[0]
-
-    if unique_colors < 10:
-        raise RuntimeError(
-            "Satellite image has insufficient pixel variation."
-        )
-
-    valid_pixels = np.count_nonzero(
-        np.any(pixels > 0, axis=2)
-    )
-
-    if valid_pixels < (
-        pixels.shape[0] * pixels.shape[1] * 0.10
-    ):
-        raise RuntimeError(
-            "Most pixels are empty or black. Image rejected."
-        )
-
-    return image
+            f"Invalid GeoTIFF returned by Sentinel Hub: {exc}"
+        ) from exc
 
 
 # ==================================================
@@ -181,31 +237,29 @@ def validate_image(image_bytes):
 # ==================================================
 
 def extract_process_response(response_content):
-    """Extract PNG image and userdata.json from TAR response."""
+    """Extract default GeoTIFF and userdata.json from TAR response."""
 
     try:
-
         with tarfile.open(
             fileobj=io.BytesIO(response_content),
             mode="r:*",
         ) as archive:
-
             members = archive.getmembers()
 
             image_member = next(
                 (
                     member for member in members
-                    if Path(member.name).name.lower() == "default.png"
+                    if Path(member.name).name.lower()
+                    in {"default.tif", "default.tiff"}
                 ),
                 None,
             )
 
             if image_member is None:
-
                 image_member = next(
                     (
                         member for member in members
-                        if member.name.lower().endswith(".png")
+                        if member.name.lower().endswith((".tif", ".tiff"))
                         and "userdata" not in member.name.lower()
                     ),
                     None,
@@ -221,7 +275,7 @@ def extract_process_response(response_content):
 
             if image_member is None:
                 raise RuntimeError(
-                    "PNG image was not found in the Process API response."
+                    "GeoTIFF was not found in the Process API response."
                 )
 
             if metadata_member is None:
@@ -234,7 +288,7 @@ def extract_process_response(response_content):
 
             if image_file is None or metadata_file is None:
                 raise RuntimeError(
-                    "Could not read image or metadata from TAR response."
+                    "Could not read GeoTIFF or metadata from TAR response."
                 )
 
             image_bytes = image_file.read()
@@ -245,7 +299,7 @@ def extract_process_response(response_content):
     except tarfile.TarError as exc:
         raise RuntimeError(
             f"Invalid TAR response from Sentinel Hub: {exc}"
-        )
+        ) from exc
 
 
 # ==================================================
@@ -266,22 +320,26 @@ def download_sentinel_image(
             "target_date must be a Python datetime object."
         )
 
-    # Calculate bounding box.
-
-    lat_offset = radius_km / 111.0
-
-    lon_offset = radius_km / (
-        111.0 * max(
-            abs(math.cos(math.radians(latitude))),
-            0.01,
-        )
+    # Build a square study-area bbox in a metric projected CRS.
+    # Shivamogga is in UTM zone 43N (EPSG:32643).
+    transformer = Transformer.from_crs(
+        "EPSG:4326",
+        OUTPUT_CRS,
+        always_xy=True,
     )
 
+    center_x, center_y = transformer.transform(
+        longitude,
+        latitude,
+    )
+
+    radius_m = radius_km * 1000.0
+
     bbox = [
-        longitude - lon_offset,
-        latitude - lat_offset,
-        longitude + lon_offset,
-        latitude + lat_offset,
+        center_x - radius_m,
+        center_y - radius_m,
+        center_x + radius_m,
+        center_y + radius_m,
     ]
 
     # Retry with progressively wider acquisition windows.
@@ -291,44 +349,42 @@ def download_sentinel_image(
     # Inject the requested date into the evalscript.
 
     target_date_string = target_date.strftime(
-        "%Y-%m-%dT%H:%M:%S"
+        "%Y-%m-%dT%H:%M:%SZ"
     )
+
 
     evalscript = f"""
     //VERSION=3
 
     var TARGET_DATE = "{target_date_string}";
+    var MAX_CLOUD_COVERAGE = {MAX_CLOUD_COVERAGE};
+    var NODATA = {NODATA_VALUE};
 
     function setup() {{
-
         return {{
-
             input: [{{
-                bands: ["B02", "B03", "B04", "dataMask"]
+                bands: [
+                    "B02", "B03", "B04",
+                    "SCL", "dataMask"
+                ]
             }}],
-
             mosaicking: Mosaicking.TILE,
-
             output: {{
                 id: "default",
                 bands: 3,
-                sampleType: "AUTO"
+                sampleType: "FLOAT32",
+                nodataValue: NODATA
             }}
         }};
     }}
 
-    // Select ONE acquisition closest to the requested date.
-
     function getSelectedIndex(scenes) {{
-
         var targetTime = Date.parse(TARGET_DATE);
-
         var selectedIndex = -1;
         var smallestDifference = Infinity;
         var lowestCloudCoverage = Infinity;
 
         for (var i = 0; i < scenes.tiles.length; i++) {{
-
             var tile = scenes.tiles[i];
 
             if (!tile.date) {{
@@ -336,22 +392,20 @@ def download_sentinel_image(
             }}
 
             var acquisitionTime = Date.parse(tile.date);
-
             if (isNaN(acquisitionTime)) {{
                 continue;
             }}
 
-            var difference = Math.abs(
-                acquisitionTime - targetTime
-            );
-
-            var cloudCoverage = Number(
-                tile.cloudCoverage
-            );
-
-            if (isNaN(cloudCoverage)) {{
-                cloudCoverage = 100;
+            var cloudCoverage = Number(tile.cloudCoverage);
+            if (
+                isNaN(cloudCoverage) ||
+                cloudCoverage < 0 ||
+                cloudCoverage > MAX_CLOUD_COVERAGE
+            ) {{
+                continue;
             }}
+
+            var difference = Math.abs(acquisitionTime - targetTime);
 
             if (
                 difference < smallestDifference ||
@@ -360,7 +414,6 @@ def download_sentinel_image(
                     cloudCoverage < lowestCloudCoverage
                 )
             ) {{
-
                 smallestDifference = difference;
                 lowestCloudCoverage = cloudCoverage;
                 selectedIndex = i;
@@ -371,26 +424,29 @@ def download_sentinel_image(
     }}
 
     function evaluatePixel(samples, scenes) {{
-
         var selectedIndex = getSelectedIndex(scenes);
 
-        if (selectedIndex < 0) {{
-            return [0, 0, 0];
+        if (selectedIndex < 0 || !samples[selectedIndex]) {{
+            return [NODATA, NODATA, NODATA];
         }}
 
-        var selectedSample = samples[selectedIndex];
+        var sample = samples[selectedIndex];
 
-        // Never mix pixels from different acquisition dates.
-
-        if (selectedSample.dataMask !== 1) {{
-            return [0, 0, 0];
+        // SCL: 3 shadow, 8/9 cloud, 10 cirrus, 11 snow/ice.
+        // dataMask also removes pixels outside valid source coverage.
+        if (
+            sample.dataMask !== 1 ||
+            sample.SCL === 3 ||
+            sample.SCL === 8 ||
+            sample.SCL === 9 ||
+            sample.SCL === 10 ||
+            sample.SCL === 11
+        ) {{
+            return [NODATA, NODATA, NODATA];
         }}
 
-        return [
-            2.5 * selectedSample.B04,
-            2.5 * selectedSample.B03,
-            2.5 * selectedSample.B02
-        ];
+        // Preserve reflectance values; do not apply display stretching.
+        return [sample.B04, sample.B03, sample.B02];
     }}
 
     function updateOutputMetadata(
@@ -398,15 +454,19 @@ def download_sentinel_image(
         inputMetadata,
         outputMetadata
     ) {{
+        var selectedIndex = getSelectedIndex(scenes);
 
         outputMetadata.userData = {{
             "tiles": scenes.tiles,
+            "selectedIndex": selectedIndex,
+            "selectedAcquisition": selectedIndex >= 0
+                ? scenes.tiles[selectedIndex]
+                : null,
             "serviceVersion": inputMetadata.serviceVersion,
             "requestedDate": TARGET_DATE
         }};
     }}
     """
-
     last_error = None
 
     # Search around the requested date.
@@ -442,7 +502,7 @@ def download_sentinel_image(
                     "properties": {
                         "crs": (
                             "http://www.opengis.net/def/crs/"
-                            "EPSG/0/4326"
+                            "EPSG/0/32643"
                         )
                     },
                 },
@@ -465,15 +525,15 @@ def download_sentinel_image(
 
             "output": {
 
-                "width": 512,
-                "height": 512,
+                "width": OUTPUT_WIDTH,
+                "height": OUTPUT_HEIGHT,
 
                 "responses": [
 
                     {
                         "identifier": "default",
                         "format": {
-                            "type": "image/png"
+                            "type": "image/tiff"
                         },
                     },
 
@@ -535,21 +595,56 @@ def download_sentinel_image(
                 target_date,
             )
 
-            # Validate downloaded image.
+            # Verify that the Evalscript rendered the same acquisition.
 
-            image = validate_image(image_bytes)
+            rendered_tile = metadata.get("selectedAcquisition")
 
-            # Save image.
+            if not rendered_tile:
+                raise RuntimeError(
+                    "Evalscript did not report its selected acquisition."
+                )
+
+            if selected_tile.get("date") != rendered_tile.get("date"):
+                raise RuntimeError(
+                    "Acquisition date mismatch between Python "
+                    "and Evalscript."
+                )
+
+            for identity_field in (
+                "productId",
+                "sentinel2ProductId",
+                "shId",
+            ):
+                python_value = selected_tile.get(identity_field)
+                rendered_value = rendered_tile.get(identity_field)
+
+                if (
+                    python_value is not None
+                    and rendered_value is not None
+                    and python_value != rendered_value
+                ):
+                    raise RuntimeError(
+                        "Acquisition mismatch for "
+                        f"{identity_field}: Python and Evalscript "
+                        "selected different Sentinel-2 products."
+                    )
+
+            print("Acquisition consistency verified.")
+
+            # Validate geospatial raster before saving.
+            raster_info = validate_geotiff(image_bytes)
+
+            # Save the original GeoTIFF bytes without stripping georeferencing.
+            output_path = Path(output_path)
+            if output_path.suffix.lower() not in {".tif", ".tiff"}:
+                output_path = output_path.with_suffix(".tif")
 
             output_path.parent.mkdir(
                 parents=True,
                 exist_ok=True,
             )
 
-            image.save(
-                output_path,
-                format="PNG",
-            )
+            output_path.write_bytes(image_bytes)
 
             # Save metadata.
 
@@ -563,6 +658,10 @@ def download_sentinel_image(
 
                 "selected_acquisition": selected_tile,
 
+                "rendered_acquisition": rendered_tile,
+
+                "max_cloud_coverage_percent": MAX_CLOUD_COVERAGE,
+
                 "search_window_days": window_days,
 
                 "search_start": start_date.isoformat(),
@@ -574,6 +673,19 @@ def download_sentinel_image(
                 "service_version": metadata.get(
                     "serviceVersion"
                 ),
+
+                "geospatial": {
+                    **raster_info,
+                    "requested_crs": OUTPUT_CRS,
+                    "requested_bbox": bbox,
+                    "requested_width": OUTPUT_WIDTH,
+                    "requested_height": OUTPUT_HEIGHT,
+                    "band_order": ["B04", "B03", "B02"],
+                    "band_description": [
+                        "Red", "Green", "Blue"
+                    ],
+                    "cloud_shadow_mask": True,
+                },
             }
 
             with open(
@@ -677,9 +789,9 @@ def retrieve_sentinel2_pair(
         exist_ok=True,
     )
 
-    before_path = analysis_dir / "before.png"
+    before_path = analysis_dir / "before.tif"
 
-    after_path = analysis_dir / "after.png"
+    after_path = analysis_dir / "after.tif"
 
     print(
         "\nDownloading BEFORE Sentinel-2 image..."

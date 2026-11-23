@@ -447,3 +447,97 @@ The current results demonstrate the implementation of the major workflows and id
 **Project:** AI-Based Human-Induced Change Detection Using Satellite Images
 
 **Repository:** https://github.com/chinmaysr17/AI-Human-Change-Detection
+## 11. Sentinel-2 Long-Term Change Analysis (January 2016–January 2026)
+
+A separate temporal analysis was conducted using Sentinel-2 Level-2A imagery to investigate spectral and land-cover changes in Shivamogga, Karnataka, India, over approximately ten years.
+
+### Study Area and Acquisition
+
+- Study area: Shivamogga, Karnataka, India.
+- Coordinate reference system: EPSG:32643 (UTM Zone 43N).
+- Analysis extent: 10 km × 10 km.
+- Raster resolution: 10 metres.
+- Raster dimensions: 1000 × 1000 pixels.
+- Satellite data: Sentinel-2 Level-2A.
+
+| Parameter | Before | After |
+|---|---|---|
+| Target date | 20 January 2016 | 20 January 2026 |
+| Selected acquisition | 13 January 2016 | 20 January 2026 |
+| Satellite | Sentinel-2A | Sentinel-2C |
+| Cloud coverage | 4.69% | 0% |
+| Tile | T43PER | T43PER |
+| Orbit | R062 | R062 |
+
+Sentinel-2 imagery was used instead of January 2015 imagery because Sentinel-2A was launched in June 2015.
+
+### Image Alignment and Quality Checks
+
+Both images were prepared on a common projected grid with identical dimensions, bounds and 10-metre pixel resolution.
+
+The Scene Classification Layer (SCL) was inspected for cloud, shadow and invalid-pixel classes. No cloud or shadow classes were identified within the study area in either selected image.
+
+### Spectral Difference Analysis
+
+A pixel-wise spectral difference analysis was performed using the aligned Blue, Green and Red bands.
+
+| Metric | Result |
+|---|---:|
+| Common valid pixels | 1,000,000 (100%) |
+| Mean absolute difference | 0.023230 |
+| Median absolute difference | 0.016067 |
+| 95th percentile | 0.066933 |
+| Maximum difference | 0.921000 |
+
+### Candidate Change Detection
+
+Two percentile-based thresholds were used to identify pixels with relatively high spectral differences.
+
+| Threshold | Candidate pixels | Area |
+|---|---:|---:|
+| 95th percentile | 50,023 | 500.23 ha |
+| 98th percentile | 20,011 | 200.11 ha |
+
+Spatial refinement was performed using a 3 × 3 median filter, 8-connected component analysis and removal of regions smaller than 9 pixels.
+
+| Threshold | Refined pixels | Refined area | Regions |
+|---|---:|---:|---:|
+| 95th percentile | 28,692 | 286.92 ha | 697 |
+| 98th percentile | 9,190 | 91.90 ha | 282 |
+
+These regions represent spectral-change candidates, not confirmed human-induced changes.
+
+### Top Candidate Region Inspection
+
+The ten largest candidate regions were extracted for further visual inspection.
+
+The largest region contained 645 pixels, corresponding to 6.45 hectares.
+
+One candidate region was manually inspected using historical Google Earth imagery:
+
+- Coordinates: 13.915181° N, 75.556568° E.
+- Historical imagery: 31 December 2016.
+- Later imagery: 12 September 2026.
+- Visual observation: vegetation in the earlier imagery and a substantially cleared or exposed-earth area with visible earthworks and access tracks in the later imagery.
+
+This provides visual evidence of land-cover change at the inspected location. However, the cause has not been independently established, and the remaining nine regions have not been individually verified.
+
+### Output Files
+
+The analysis scripts generate outputs under:
+
+`data/sentinel2/analyses/`
+
+The main output directories are:
+
+- `shivamogga_20160113_20260120_spectral/`
+- `shivamogga_20160113_20260120_candidates/`
+- `shivamogga_20160113_20260120_spatial_refinement/`
+- `shivamogga_20160113_20260120_top10_regions/`
+
+The workflow scripts include:
+
+- `sentinel2_spectral_change_jan2016_2026.py`
+- `create_sentinel2_candidate_masks.py`
+- `refine_sentinel2_candidate_regions.py`
+- `extract_top10_sentinel2
