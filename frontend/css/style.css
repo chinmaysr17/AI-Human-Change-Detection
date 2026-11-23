@@ -3307,7 +3307,7 @@ body[data-theme="dark"] .dashboard-content #locationMap {
 
 .analysis-statistics-grid {
     display: grid !important;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     gap: 12px !important;
     margin: 20px 0 26px !important;
 }
