@@ -117,8 +117,11 @@ function createHistoryCard(record, index) {
 
     otherEntries.forEach(([key, value]) => {
         const row = document.createElement("p");
+        row.className = "history-detail-row";
         const labelElement = document.createElement("strong");
+        labelElement.className = "history-detail-label";
         const valueElement = document.createElement("span");
+        valueElement.className = "history-detail-value";
 
         labelElement.textContent =
             `${key.replaceAll("_", " ")}: `;
@@ -132,8 +135,11 @@ function createHistoryCard(record, index) {
 
     if (record.imagery_retrieved !== undefined) {
         const row = document.createElement("p");
+        row.className = "history-detail-row";
         const labelElement = document.createElement("strong");
+        labelElement.className = "history-detail-label";
         const valueElement = document.createElement("span");
+        valueElement.className = "history-detail-value";
 
         labelElement.textContent = "Imagery Retrieved: ";
         valueElement.textContent = record.imagery_retrieved
