@@ -28,10 +28,10 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 SESSION_COOKIE_NAME = "hcd_session"
 SESSION_MAX_AGE = 86400
 
-FRONTEND_ORIGIN = os.getenv(
-    "FRONTEND_ORIGIN",
-    "http://127.0.0.1:5501",
-)
+FRONTEND_ORIGINS = {
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+}
 
 COOKIE_SECURE = (
     os.getenv("COOKIE_SECURE", "false").lower() == "true"
@@ -54,7 +54,7 @@ def verify_frontend_origin(request: Request):
 
     origin = request.headers.get("origin")
 
-    if origin != FRONTEND_ORIGIN:
+    if origin not in FRONTEND_ORIGINS:
         raise HTTPException(
             status_code=403,
             detail="Invalid request origin",

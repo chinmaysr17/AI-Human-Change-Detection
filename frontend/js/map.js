@@ -436,9 +436,9 @@ function displayAnalysisResults(result) {
 // RUN LOCATION-BASED ANALYSIS
 // =====================================================
 
+
 async function validateAnalysisSelection() {
 
-    // Require authentication before starting satellite analysis.
     if (!window.currentUser) {
         showSelectionStatus(
             "Please log in before starting satellite image analysis.",
@@ -496,18 +496,51 @@ async function validateAnalysisSelection() {
     const originalButtonText = button.textContent;
 
     button.disabled = true;
-    button.textContent = "Analyzing...";
 
     try {
-        if (typeof analyzeLocation !== "function") {
+        // STEP 1: Check historical imagery availability.
+        button.textContent = "Checking imagery...";
+
+        showSelectionStatus(
+            "Checking historical Sentinel-2 imagery availability..."
+        );
+
+        if (typeof checkImageryAvailability !== "function") {
             throw new Error(
-                "analyzeLocation() is unavailable. Check frontend/js/api.js."
+                "checkImageryAvailability() is unavailable. Check api.js."
             );
         }
 
+        const availability = await checkImageryAvailability(requestBody);
+
+        if (availability.status !== "available") {
+            throw new Error(
+                availability.message ||
+                "Suitable imagery is unavailable for one or both dates."
+            );
+        }
+
+        const before = availability.availability.before;
+        const after = availability.availability.after;
+
         showSelectionStatus(
-            "Retrieving Sentinel-2 images and running experimental change detection. Please wait."
+            [
+                "Sentinel-2 imagery is available for both dates.",
+                `Before: ${before.actual_acquisition_date} (${before.cloud_coverage_percent}% cloud)`,
+                `After: ${after.actual_acquisition_date} (${after.cloud_coverage_percent}% cloud)`
+            ].join("\n")
         );
+
+
+
+        // STEP 3: Start actual image retrieval and analysis.
+        if (typeof analyzeLocation !== "function") {
+            throw new Error(
+                "analyzeLocation() is unavailable. Check api.js."
+            );
+        }
+
+        button.textContent = "Analyzing...";
 
         const locationStatus = document.getElementById("locationStatus");
 
@@ -536,6 +569,7 @@ async function validateAnalysisSelection() {
             locationStatus.textContent = "Satellite analysis completed.";
         }
 
+        console.log("Sentinel-2 availability result:", availability);
         console.log("Sentinel-2 analysis result:", result);
 
     } catch (error) {
@@ -554,6 +588,7 @@ async function validateAnalysisSelection() {
         button.textContent = originalButtonText;
     }
 }
+
 
 
 // =====================================================

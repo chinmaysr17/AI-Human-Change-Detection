@@ -22,7 +22,11 @@ from backend.app.auth_router import (
 from backend.app.database import get_db
 from backend.app.models import AnalysisHistory
 from src.data.image_loader import load_image_pair
-from src.data.sentinel2_service import retrieve_sentinel2_pair
+from src.preprocessing.sentinel2_preprocessor import load_sentinel_pair
+from src.data.sentinel2_service import (
+    retrieve_sentinel2_pair,
+    check_sentinel2_pair_availability,
+)
 from src.inference.change_detector import run_change_detection
 
 
@@ -77,14 +81,14 @@ app = FastAPI(
     version="1.3.0",
 )
 
-FRONTEND_ORIGIN = os.getenv(
-    "FRONTEND_ORIGIN",
-    "http://127.0.0.1:5501",
-)
+FRONTEND_ORIGINS = [
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_ORIGIN],
+    allow_origins=FRONTEND_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type", "X-CSRF-Token"],
@@ -221,6 +225,68 @@ def validate_analysis_selection(
 # =========================================================
 # ANALYSIS HISTORY ENDPOINT
 # =========================================================
+
+# =========================================================
+# SENTINEL-2 HISTORICAL IMAGERY AVAILABILITY ENDPOINT
+# =========================================================
+
+@app.post("/api/check-availability")
+def check_imagery_availability(
+    selection: AnalysisSelectionRequest,
+    current_user=Depends(get_current_user),
+):
+    """Check historical Sentinel-2 availability without downloading imagery."""
+
+    if selection.after_date <= selection.before_date:
+        raise HTTPException(
+            status_code=422,
+            detail="after_date must be later than before_date.",
+        )
+
+    if (
+        selection.before_date > date.today()
+        or selection.after_date > date.today()
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Availability dates cannot be in the future.",
+        )
+
+    try:
+        availability = check_sentinel2_pair_availability(
+            latitude=selection.latitude,
+            longitude=selection.longitude,
+            radius_km=selection.radius_km,
+            before_date=datetime.combine(
+                selection.before_date,
+                datetime.min.time(),
+            ),
+            after_date=datetime.combine(
+                selection.after_date,
+                datetime.min.time(),
+            ),
+        )
+
+        return {
+            "status": (
+                "available"
+                if availability["available"]
+                else "unavailable"
+            ),
+            "message": availability["message"],
+            "latitude": selection.latitude,
+            "longitude": selection.longitude,
+            "radius_km": selection.radius_km,
+            "before_date": selection.before_date.isoformat(),
+            "after_date": selection.after_date.isoformat(),
+            "availability": availability,
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Sentinel-2 availability check failed: {str(error)}",
+        ) from error
 
 @app.get("/api/analysis-history")
 def get_analysis_history(

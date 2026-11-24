@@ -28,7 +28,7 @@ TOKEN_URL = (
 )
 
 PROCESS_URL = "https://sh.dataspace.copernicus.eu/api/v1/process"
-
+CATALOG_URL = "https://sh.dataspace.copernicus.eu/catalog/v1/search"
 OUTPUT_DIR = BASE_DIR / "data" / "sentinel2" / "analyses"
 
 
@@ -140,16 +140,48 @@ def select_closest_tile(
     return eligible_tiles[0][2]
 
 # ==================================================
-# GEOTIFF VALIDATION
+# GLOBAL GEOSPATIAL CONFIGURATION
 # ==================================================
 
-OUTPUT_CRS = "EPSG:32643"
 OUTPUT_WIDTH = 1000
 OUTPUT_HEIGHT = 1000
 NODATA_VALUE = -9999.0
 
 
-def validate_geotiff(image_bytes):
+def get_local_utm_crs(latitude, longitude):
+    """
+    Select a suitable projected CRS for a geographic location.
+
+    Uses UTM for latitudes between 80°S and 84°N.
+    Uses polar stereographic projections outside that range.
+    """
+
+    if not -90 <= latitude <= 90:
+        raise ValueError("Latitude must be between -90 and 90.")
+
+    if not -180 <= longitude <= 180:
+        raise ValueError("Longitude must be between -180 and 180.")
+
+    # Arctic and Antarctic polar regions
+    if latitude >= 84:
+        return "EPSG:3413"
+
+    if latitude <= -80:
+        return "EPSG:3031"
+
+    # Calculate the appropriate UTM zone
+    zone = int((longitude + 180) // 6) + 1
+    zone = max(1, min(zone, 60))
+
+    if latitude >= 0:
+        epsg_code = 32600 + zone
+    else:
+        epsg_code = 32700 + zone
+
+    return f"EPSG:{epsg_code}"
+
+
+def validate_geotiff(image_bytes, expected_crs):
     """Validate a georeferenced 3-band Float32 GeoTIFF."""
 
     try:
@@ -183,10 +215,10 @@ def validate_geotiff(image_bytes):
                         "GeoTIFF has no CRS; refusing ungeoreferenced imagery."
                     )
 
-                if dataset.crs.to_string() != OUTPUT_CRS:
+                if dataset.crs != rasterio.crs.CRS.from_user_input(expected_crs):
                     raise RuntimeError(
-                        f"Unexpected CRS: {dataset.crs}; expected {OUTPUT_CRS}."
-                    )
+        f"Unexpected CRS: {dataset.crs}; expected {expected_crs}."
+    )
 
                 if dataset.nodata is None:
                     raise RuntimeError(
@@ -302,6 +334,245 @@ def extract_process_response(response_content):
         ) from exc
 
 
+def check_sentinel2_availability(
+    token,
+    latitude,
+    longitude,
+    radius_km,
+    target_date,
+    output_crs=None,
+    max_cloud_coverage=MAX_CLOUD_COVERAGE,
+):
+    """
+    Check Sentinel-2 L2A catalogue availability without
+    downloading or processing satellite imagery.
+    """
+
+    if not isinstance(target_date, datetime):
+        raise TypeError("target_date must be a datetime object.")
+
+    if radius_km <= 0:
+        raise ValueError("radius_km must be greater than zero.")
+
+    if output_crs is None:
+        output_crs = get_local_utm_crs(latitude, longitude)
+
+    # Create the same projected bounding box used by image downloads.
+    transformer = Transformer.from_crs(
+        "EPSG:4326",
+        output_crs,
+        always_xy=True,
+    )
+
+    center_x, center_y = transformer.transform(
+        longitude,
+        latitude,
+    )
+
+    radius_m = radius_km * 1000.0
+
+    bbox_utm = [
+        center_x - radius_m,
+        center_y - radius_m,
+        center_x + radius_m,
+        center_y + radius_m,
+    ]
+
+    # Catalog API requires WGS84 longitude/latitude coordinates.
+    to_wgs84 = Transformer.from_crs(
+        output_crs,
+        "EPSG:4326",
+        always_xy=True,
+    )
+
+    corners = [
+        to_wgs84.transform(bbox_utm[0], bbox_utm[1]),
+        to_wgs84.transform(bbox_utm[0], bbox_utm[3]),
+        to_wgs84.transform(bbox_utm[2], bbox_utm[1]),
+        to_wgs84.transform(bbox_utm[2], bbox_utm[3]),
+    ]
+
+    bbox_wgs84 = [
+        min(point[0] for point in corners),
+        min(point[1] for point in corners),
+        max(point[0] for point in corners),
+        max(point[1] for point in corners),
+    ]
+
+    search_windows = [15, 30, 45, 60]
+
+    for window_days in search_windows:
+
+        start_date = target_date - timedelta(days=window_days)
+        end_date = target_date + timedelta(days=window_days)
+
+        start_datetime = start_date.strftime(
+            "%Y-%m-%dT00:00:00Z"
+        )
+        end_datetime = end_date.strftime(
+            "%Y-%m-%dT23:59:59Z"
+        )
+
+        payload = {
+            "collections": ["sentinel-2-l2a"],
+            "bbox": bbox_wgs84,
+            "datetime": f"{start_datetime}/{end_datetime}",
+            "limit": 100,
+        }
+
+        print(
+            f"Checking Sentinel-2 catalogue around "
+            f"{target_date.date()} (+/- {window_days} days)..."
+        )
+
+        response = requests.post(
+            CATALOG_URL,
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            timeout=60,
+        )
+
+        if not response.ok:
+            raise RuntimeError(
+                f"Sentinel Hub Catalog API HTTP "
+                f"{response.status_code}: {response.text[:2000]}"
+            )
+
+        catalog_data = response.json()
+        features = catalog_data.get("features", [])
+
+        # Convert Catalog API metadata into the format
+        # expected by the existing acquisition selector.
+        tiles = []
+
+        for feature in features:
+
+            properties = feature.get("properties", {})
+
+            acquisition_date = properties.get("datetime")
+            cloud_coverage = properties.get("eo:cloud_cover")
+
+            if not acquisition_date or cloud_coverage is None:
+                continue
+
+            tiles.append({
+                "date": acquisition_date,
+                "cloudCoverage": cloud_coverage,
+                "productId": feature.get("id"),
+                "catalogId": feature.get("id"),
+                "collection": feature.get("collection"),
+            })
+
+        if not tiles:
+            print("No catalogue acquisitions found in this window.")
+            continue
+
+        try:
+            selected_tile = select_closest_tile(
+                tiles,
+                target_date,
+                max_cloud_coverage=max_cloud_coverage,
+            )
+        except RuntimeError:
+            print(
+                f"No acquisition satisfies the "
+                f"{max_cloud_coverage}% cloud limit."
+            )
+            continue
+
+        return {
+            "available": True,
+            "requested_date": target_date.isoformat(),
+            "selected_acquisition": selected_tile,
+            "actual_acquisition_date": selected_tile["date"],
+            "cloud_coverage_percent": float(
+                selected_tile["cloudCoverage"]
+            ),
+            "product_id": selected_tile["productId"],
+            "search_window_days": window_days,
+            "search_start": start_date.isoformat(),
+            "search_end": end_date.isoformat(),
+            "catalog_results_count": len(features),
+            "eligible_results_count": len(tiles),
+            "max_cloud_coverage_percent": max_cloud_coverage,
+            "catalog_bbox_wgs84": bbox_wgs84,
+        }
+
+    return {
+        "available": False,
+        "requested_date": target_date.isoformat(),
+        "selected_acquisition": None,
+        "actual_acquisition_date": None,
+        "cloud_coverage_percent": None,
+        "product_id": None,
+        "max_cloud_coverage_percent": max_cloud_coverage,
+        "message": (
+            "No suitable Sentinel-2 acquisition was found "
+            "within the 60-day search window."
+        ),
+    }
+
+def check_sentinel2_pair_availability(
+    latitude,
+    longitude,
+    radius_km,
+    before_date,
+    after_date,
+    max_cloud_coverage=MAX_CLOUD_COVERAGE,
+):
+    """Check availability of both images without downloading them."""
+
+    if not isinstance(before_date, datetime):
+        raise TypeError("before_date must be a datetime object.")
+
+    if not isinstance(after_date, datetime):
+        raise TypeError("after_date must be a datetime object.")
+
+    if before_date >= after_date:
+        raise ValueError("Before date must be earlier than after date.")
+
+    token = get_access_token()
+    output_crs = get_local_utm_crs(latitude, longitude)
+
+    before_result = check_sentinel2_availability(
+        token=token,
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius_km,
+        target_date=before_date,
+        output_crs=output_crs,
+        max_cloud_coverage=max_cloud_coverage,
+    )
+
+    after_result = check_sentinel2_availability(
+        token=token,
+        latitude=latitude,
+        longitude=longitude,
+        radius_km=radius_km,
+        target_date=after_date,
+        output_crs=output_crs,
+        max_cloud_coverage=max_cloud_coverage,
+    )
+
+    pair_available = (
+        before_result["available"]
+        and after_result["available"]
+    )
+
+    return {
+        "available": pair_available,
+        "before": before_result,
+        "after": after_result,
+        "message": (
+            "Both Sentinel-2 acquisitions are available."
+            if pair_available
+            else "A suitable acquisition was not found for both dates."
+        ),
+    }
+
 # ==================================================
 # SENTINEL-2 IMAGE DOWNLOAD
 # ==================================================
@@ -313,6 +584,7 @@ def download_sentinel_image(
     radius_km,
     target_date,
     output_path,
+    output_crs,
 ):
 
     if not isinstance(target_date, datetime):
@@ -320,13 +592,12 @@ def download_sentinel_image(
             "target_date must be a Python datetime object."
         )
 
-    # Build a square study-area bbox in a metric projected CRS.
-    # Shivamogga is in UTM zone 43N (EPSG:32643).
+    # Build a square study-area bbox using the selected local CRS.
     transformer = Transformer.from_crs(
-        "EPSG:4326",
-        OUTPUT_CRS,
-        always_xy=True,
-    )
+    "EPSG:4326",
+    output_crs,
+    always_xy=True,
+        )
 
     center_x, center_y = transformer.transform(
         longitude,
@@ -500,9 +771,9 @@ def download_sentinel_image(
                     "bbox": bbox,
 
                     "properties": {
-                        "crs": (
+                       "crs": (
                             "http://www.opengis.net/def/crs/"
-                            "EPSG/0/32643"
+                            f"EPSG/0/{output_crs.split(':')[1]}"
                         )
                     },
                 },
@@ -632,7 +903,7 @@ def download_sentinel_image(
             print("Acquisition consistency verified.")
 
             # Validate geospatial raster before saving.
-            raster_info = validate_geotiff(image_bytes)
+            raster_info = validate_geotiff(image_bytes, output_crs)
 
             # Save the original GeoTIFF bytes without stripping georeferencing.
             output_path = Path(output_path)
@@ -676,7 +947,7 @@ def download_sentinel_image(
 
                 "geospatial": {
                     **raster_info,
-                    "requested_crs": OUTPUT_CRS,
+                    "requested_crs":  output_crs,
                     "requested_bbox": bbox,
                     "requested_width": OUTPUT_WIDTH,
                     "requested_height": OUTPUT_HEIGHT,
@@ -781,7 +1052,9 @@ def retrieve_sentinel2_pair(
         )
 
     token = get_access_token()
+    output_crs = get_local_utm_crs(latitude, longitude)
 
+    print(f"Selected CRS for location: {output_crs}")
     analysis_dir = OUTPUT_DIR / f"analysis_{record_id}"
 
     analysis_dir.mkdir(
@@ -804,6 +1077,7 @@ def retrieve_sentinel2_pair(
         radius_km,
         before_date,
         before_path,
+        output_crs=output_crs,
     )
 
     print(
@@ -817,6 +1091,7 @@ def retrieve_sentinel2_pair(
         radius_km,
         after_date,
         after_path,
+        output_crs=output_crs,
     )
 
     print(

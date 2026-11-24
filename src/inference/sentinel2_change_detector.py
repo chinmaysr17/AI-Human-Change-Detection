@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 from pathlib import Path
 from tensorflow.keras.models import load_model
-
+from src.preprocessing.sentinel2_preprocessor import load_sentinel_pair
 
 # ==================================================
 # PROJECT CONFIGURATION
@@ -17,9 +17,8 @@ IMAGE_DIR = (
     / "data"
     / "sentinel2"
     / "analyses"
-    / "analysis_acquisition_test_01"
+    / "analysis_new_york_global_test"
 )
-
 MODEL_PATH = (
     BASE_DIR
     / "models"
@@ -92,11 +91,14 @@ def save_probability_map(prediction):
 # THRESHOLD SENSITIVITY ANALYSIS
 # ==================================================
 
-def evaluate_thresholds(prediction, before_image):
+def evaluate_thresholds(prediction, before_image, valid_mask):
 
     results = []
 
-    total_pixels = prediction.size
+    total_pixels = int(valid_mask.sum())
+
+    if total_pixels == 0:
+         raise ValueError("No valid pixels available for evaluation.")
 
     print("\n===================================")
     print(" THRESHOLD SENSITIVITY ANALYSIS")
@@ -106,7 +108,7 @@ def evaluate_thresholds(prediction, before_image):
 
         # Generate binary change mask.
         change_mask = (
-            prediction >= threshold
+            (prediction >= threshold) & valid_mask
         ).astype(np.uint8)
 
         changed_pixels = int(
@@ -220,31 +222,25 @@ def run_sentinel2_detection():
             f"CNN model not found: {MODEL_PATH}"
         )
 
-    # Input images.
-    before_path = IMAGE_DIR / "before.png"
-    after_path = IMAGE_DIR / "after_aligned.png"
+        # Input GeoTIFF images.
+    before_path = IMAGE_DIR / "before.tif"
+    after_path = IMAGE_DIR / "after.tif"
 
-    print("\nLoading BEFORE image...")
-    before = load_sentinel_image(before_path)
+    print("\nLoading and preprocessing GeoTIFF pair...")
 
-    print("Loading ALIGNED AFTER image...")
-    after = load_sentinel_image(after_path)
+    (
+        model_input,
+        before_display,
+        after_display,
+        valid_mask,
+    ) = load_sentinel_pair(before_path, after_path)
 
     print("\nImage preprocessing completed.")
+    print("CNN input shape:", model_input.shape)
+    print("Valid pixels:", int(valid_mask.sum()))
+    print("Invalid pixels:", int(valid_mask.size - valid_mask.sum()))
 
-    print("Before image shape:", before.shape)
-    print("After image shape:", after.shape)
 
-    # Concatenate before and after RGB channels.
-    combined = np.concatenate(
-        [before, after],
-        axis=-1
-    )
-
-    model_input = np.expand_dims(
-        combined,
-        axis=0
-    )
 
     print("Combined model input:", model_input.shape)
 
@@ -288,19 +284,14 @@ def run_sentinel2_detection():
     save_probability_map(prediction)
 
     # Prepare before image for overlays.
-    before_display = np.asarray(
-        Image.open(before_path)
-        .convert("RGB")
-        .resize(
-            IMAGE_SIZE,
-            Image.Resampling.BILINEAR
-        )
-    ).copy()
+    # Already converted and resized by shared preprocessing.
+    before_display = before_display.copy()
 
     # Compare all thresholds.
     results = evaluate_thresholds(
         prediction,
-        before_display
+        before_display,
+        valid_mask
     )
 
     # Save CSV report.

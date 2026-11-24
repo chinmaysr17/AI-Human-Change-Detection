@@ -154,6 +154,42 @@ async function analyzeSatelliteImage(filename) {
 // SAVE LOCATION AND DATE SELECTION
 // =====================================================
 
+// =====================================================
+// CHECK SENTINEL-2 HISTORICAL IMAGERY AVAILABILITY
+// Backend: POST /api/check-availability
+// =====================================================
+
+async function checkImageryAvailability(selection) {
+    if (!selection || typeof selection !== "object") {
+        throw new Error("Invalid imagery availability request.");
+    }
+
+    const requiredFields = [
+        "latitude",
+        "longitude",
+        "radius_km",
+        "before_date",
+        "after_date"
+    ];
+
+    for (const field of requiredFields) {
+        if (selection[field] === undefined || selection[field] === null) {
+            throw new Error(`Missing required field: ${field}`);
+        }
+    }
+
+    return await apiRequest("/api/check-availability", {
+        method: "POST",
+        body: JSON.stringify({
+            latitude: Number(selection.latitude),
+            longitude: Number(selection.longitude),
+            radius_km: Number(selection.radius_km),
+            before_date: selection.before_date,
+            after_date: selection.after_date
+        })
+    });
+}
+
 async function saveAnalysisSelection(selection) {
     if (!selection || typeof selection !== "object") {
         throw new Error("Invalid analysis selection.");
