@@ -29,7 +29,6 @@ TOKEN_URL = (
 
 PROCESS_URL = "https://sh.dataspace.copernicus.eu/api/v1/process"
 CATALOG_URL = "https://sh.dataspace.copernicus.eu/catalog/v1/search"
-OUTPUT_DIR = BASE_DIR / "data" / "sentinel2" / "analyses"
 
 
 # ==================================================
@@ -583,7 +582,6 @@ def download_sentinel_image(
     longitude,
     radius_km,
     target_date,
-    output_path,
     output_crs,
 ):
 
@@ -902,111 +900,42 @@ def download_sentinel_image(
 
             print("Acquisition consistency verified.")
 
-            # Validate geospatial raster before saving.
+            # Validate the GeoTIFF while it is still in memory.
             raster_info = validate_geotiff(image_bytes, output_crs)
 
-            # Save the original GeoTIFF bytes without stripping georeferencing.
-            output_path = Path(output_path)
-            if output_path.suffix.lower() not in {".tif", ".tiff"}:
-                output_path = output_path.with_suffix(".tif")
-
-            output_path.parent.mkdir(
-                parents=True,
-                exist_ok=True,
-            )
-
-            output_path.write_bytes(image_bytes)
-
-            # Save metadata.
-
-            metadata_path = output_path.with_name(
-                f"{output_path.stem}_metadata.json"
-            )
-
             metadata_record = {
-
                 "requested_date": target_date.isoformat(),
-
                 "selected_acquisition": selected_tile,
-
                 "rendered_acquisition": rendered_tile,
-
                 "max_cloud_coverage_percent": MAX_CLOUD_COVERAGE,
-
                 "search_window_days": window_days,
-
                 "search_start": start_date.isoformat(),
-
                 "search_end": end_date.isoformat(),
-
                 "tiles": tiles,
-
-                "service_version": metadata.get(
-                    "serviceVersion"
-                ),
-
+                "service_version": metadata.get("serviceVersion"),
                 "geospatial": {
                     **raster_info,
-                    "requested_crs":  output_crs,
+                    "requested_crs": output_crs,
                     "requested_bbox": bbox,
                     "requested_width": OUTPUT_WIDTH,
                     "requested_height": OUTPUT_HEIGHT,
                     "band_order": ["B04", "B03", "B02"],
-                    "band_description": [
-                        "Red", "Green", "Blue"
-                    ],
+                    "band_description": ["Red", "Green", "Blue"],
                     "cloud_shadow_mask": True,
                 },
             }
 
-            with open(
-                metadata_path,
-                "w",
-                encoding="utf-8",
-            ) as metadata_file:
-
-                json.dump(
-                    metadata_record,
-                    metadata_file,
-                    indent=4,
-                )
-
-            # Display selected acquisition details.
-
             print("\nSelected Sentinel-2 acquisition:")
+            print("Requested date:", target_date.date())
+            print("Actual acquisition:", selected_tile.get("date"))
+            print("Cloud coverage:", selected_tile.get("cloudCoverage"), "%")
+            print("Product ID:", selected_tile.get("productId"))
+            print("GeoTIFF validated and retained in memory.")
 
-            print(
-                "Requested date:",
-                target_date.date(),
-            )
-
-            print(
-                "Actual acquisition:",
-                selected_tile.get("date"),
-            )
-
-            print(
-                "Cloud coverage:",
-                selected_tile.get("cloudCoverage"),
-                "%",
-            )
-
-            print(
-                "Product ID:",
-                selected_tile.get("productId"),
-            )
-
-            print(
-                "\nSatellite image saved:",
-                output_path,
-            )
-
-            print(
-                "Metadata saved:",
-                metadata_path,
-            )
-
-            return output_path
+            return {
+                "image_bytes": image_bytes,
+                "metadata": metadata_record,
+            }
 
         except Exception as exc:
 
@@ -1032,85 +961,47 @@ def retrieve_sentinel2_pair(
     radius_km,
     before_date,
     after_date,
-    record_id,
 ):
+    """Retrieve a date pair as in-memory GeoTIFF bytes; never write imagery to disk."""
 
     if not isinstance(before_date, datetime):
-        raise TypeError(
-            "before_date must be a datetime object."
-        )
+        raise TypeError("before_date must be a datetime object.")
 
     if not isinstance(after_date, datetime):
-        raise TypeError(
-            "after_date must be a datetime object."
-        )
+        raise TypeError("after_date must be a datetime object.")
 
     if before_date >= after_date:
-
-        raise ValueError(
-            "Before date must be earlier than after date."
-        )
+        raise ValueError("Before date must be earlier than after date.")
 
     token = get_access_token()
     output_crs = get_local_utm_crs(latitude, longitude)
 
     print(f"Selected CRS for location: {output_crs}")
-    analysis_dir = OUTPUT_DIR / f"analysis_{record_id}"
-
-    analysis_dir.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    before_path = analysis_dir / "before.tif"
-
-    after_path = analysis_dir / "after.tif"
-
-    print(
-        "\nDownloading BEFORE Sentinel-2 image..."
-    )
-
-    download_sentinel_image(
+    print("\nRetrieving BEFORE Sentinel-2 image into memory...")
+    before_result = download_sentinel_image(
         token,
         latitude,
         longitude,
         radius_km,
         before_date,
-        before_path,
         output_crs=output_crs,
     )
 
-    print(
-        "\nDownloading AFTER Sentinel-2 image..."
-    )
-
-    download_sentinel_image(
+    print("\nRetrieving AFTER Sentinel-2 image into memory...")
+    after_result = download_sentinel_image(
         token,
         latitude,
         longitude,
         radius_km,
         after_date,
-        after_path,
         output_crs=output_crs,
     )
 
-    print(
-        "\nBoth Sentinel-2 images downloaded successfully."
-    )
-
+    print("\nBoth Sentinel-2 GeoTIFFs retrieved in memory.")
     return {
-
-        "before_image": str(before_path),
-
-        "after_image": str(after_path),
-
-        "before_metadata": str(
-            before_path.with_name("before_metadata.json")
-        ),
-
-        "after_metadata": str(
-            after_path.with_name("after_metadata.json")
-        ),
-
-        "analysis_directory": str(analysis_dir),
+        "before_image": before_result["image_bytes"],
+        "after_image": after_result["image_bytes"],
+        "before_metadata": before_result["metadata"],
+        "after_metadata": after_result["metadata"],
+        "output_crs": output_crs,
     }
