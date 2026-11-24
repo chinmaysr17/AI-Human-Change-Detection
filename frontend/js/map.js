@@ -561,6 +561,14 @@ async function validateAnalysisSelection() {
 
         displayAnalysisResults(result);
 
+        // Refresh user-specific dashboard metrics and history after a successful run.
+        if (typeof loadDashboardStatistics === "function") {
+            await loadDashboardStatistics();
+        }
+        if (typeof loadAnalysisHistory === "function") {
+            await loadAnalysisHistory();
+        }
+
         showSelectionStatus(
             "Satellite analysis completed. Review the experimental results below."
         );
