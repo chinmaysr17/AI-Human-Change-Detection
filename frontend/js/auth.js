@@ -185,6 +185,11 @@ if (emailAddress) emailAddress.textContent = email;
             loadAnalysisHistory();
         }
 
+        // Load dashboard metrics only after authentication is established.
+        if (typeof loadDashboardStatistics === "function") {
+            loadDashboardStatistics();
+        }
+
     } else {
 
         // Hide dashboard and reveal authentication.
@@ -208,6 +213,11 @@ if (emailAddress) emailAddress.textContent = email;
         // Clear authenticated user's history.
         if (typeof clearAnalysisHistory === "function") {
             clearAnalysisHistory();
+        }
+
+        // Clear dashboard metrics when the user logs out.
+        if (typeof loadDashboardStatistics === "function") {
+            loadDashboardStatistics();
         }
 
         showAuthStatus("Please log in or create an account.");
