@@ -444,19 +444,6 @@ def get_sentinel_model():
     return _sentinel_model
 
 
-def load_sentinel_image(image_path):
-    """Load an RGB Sentinel image and prepare a 256x256 float input."""
-    with Image.open(image_path) as image:
-        image = image.convert("RGB")
-        image = image.resize(
-            SENTINEL_IMAGE_SIZE,
-            Image.Resampling.BILINEAR,
-        )
-        array = np.asarray(image, dtype=np.float32) / 255.0
-
-    return array
-
-
 # =========================================================
 # LOCATION-BASED SENTINEL-2 ANALYSIS ENDPOINT
 # =========================================================
@@ -510,7 +497,7 @@ def analyze_location(
     imagery_retrieved = False
 
     try:
-        image_paths = retrieve_sentinel2_pair(
+        image_pair = retrieve_sentinel2_pair(
             latitude=selection.latitude,
             longitude=selection.longitude,
             radius_km=selection.radius_km,
@@ -522,36 +509,37 @@ def analyze_location(
                 selection.after_date,
                 datetime.min.time(),
             ),
-            record_id=record_id,
         )
         imagery_retrieved = True
 
-        before_path = image_paths["before_image"]
-        after_path = image_paths["after_image"]
-        before_image_array = load_sentinel_image(before_path)
-        after_image_array = load_sentinel_image(after_path)
-
-        combined_image = np.concatenate(
-            [before_image_array, after_image_array],
-            axis=-1,
+        (
+            model_input,
+            before_image_array,
+            after_image_array,
+            valid_mask,
+        ) = load_sentinel_pair(
+            image_pair["before_image"],
+            image_pair["after_image"],
         )
-        model_input = np.expand_dims(combined_image, axis=0)
+
+        valid_pixel_count = int(np.sum(valid_mask))
+        if valid_pixel_count == 0:
+            raise ValueError("No valid overlapping pixels are available for analysis.")
+
         model = get_sentinel_model()
         prediction = model.predict(model_input, verbose=0)[0, :, :, 0]
 
-        change_mask = (prediction >= SENTINEL_THRESHOLD).astype(np.uint8)
-        changed_pixels = int(np.sum(change_mask))
-        total_pixels = int(change_mask.size)
-        change_percentage = (
-            (changed_pixels / total_pixels) * 100.0 if total_pixels else 0.0
-        )
+        if prediction.shape != valid_mask.shape:
+            raise ValueError("CNN prediction dimensions do not match the validity mask.")
 
-        result_directory = Path(image_paths["analysis_directory"]) / "results"
-        result_directory.mkdir(parents=True, exist_ok=True)
-        Image.fromarray(
-            np.clip(prediction * 255.0, 0, 255).astype(np.uint8)
-        ).save(result_directory / "change_probability.png")
-        Image.fromarray(change_mask * 255).save(result_directory / "change_mask.png")
+        valid_predictions = prediction[valid_mask]
+        change_mask = (
+            (prediction >= SENTINEL_THRESHOLD) & valid_mask
+        ).astype(np.uint8)
+
+        changed_pixels = int(np.sum(change_mask))
+        total_pixels = valid_pixel_count
+        change_percentage = (changed_pixels / total_pixels) * 100.0
 
         record_to_update = db.scalar(
             select(AnalysisHistory).where(
@@ -566,7 +554,7 @@ def analyze_location(
         record_to_update.imagery_retrieved = 1
         db.commit()
 
-        return {
+        response_payload = {
             "record_id": record_id,
             "status": "completed",
             "validation_status": (
@@ -577,18 +565,23 @@ def analyze_location(
             "predicted_change_pixels": changed_pixels,
             "total_pixels": total_pixels,
             "change_percentage": round(change_percentage, 4),
-            "prediction_min": float(prediction.min()),
-            "prediction_max": float(prediction.max()),
-            "prediction_mean": float(prediction.mean()),
+            "prediction_min": float(valid_predictions.min()),
+            "prediction_max": float(valid_predictions.max()),
+            "prediction_mean": float(valid_predictions.mean()),
             "before_image": create_image_data_url(before_image_array),
             "after_image": create_image_data_url(after_image_array),
             "change_map": create_change_map(change_mask),
             "change_overlay": create_change_overlay(after_image_array, change_mask),
             "change_regions": [],
             "imagery_retrieved": True,
-            "before_image_path": str(before_path),
-            "after_image_path": str(after_path),
         }
+
+        # Drop source GeoTIFF buffers and intermediate arrays after creating
+        # the response previews. Only metadata/history and preview strings remain.
+        del image_pair, model_input, prediction, valid_predictions
+        del before_image_array, after_image_array, valid_mask, change_mask
+
+        return response_payload
 
     except Exception as error:
         db.rollback()
