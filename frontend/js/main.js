@@ -85,6 +85,71 @@ async function loadModelInformation() {
 
 
 // =====================================================
+// DISPLAY AUTHENTICATED DASHBOARD STATISTICS
+// =====================================================
+
+async function loadDashboardStatistics() {
+    const setText = (elementId, value) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.textContent =
+                value === undefined || value === null || value === ""
+                    ? "N/A"
+                    : String(value);
+        }
+    };
+
+    if (!window.currentUser) {
+        setText("overviewTotalAnalyses", "—");
+        setText("overviewDetectedChanges", "—");
+        setText("overviewLocations", "—");
+        setText("overviewModelF1", "—");
+        return;
+    }
+
+    setText("overviewTotalAnalyses", "…");
+    setText("overviewDetectedChanges", "…");
+    setText("overviewLocations", "…");
+    setText("overviewModelF1", "…");
+
+    try {
+        const stats = await getDashboardStatistics();
+
+        setText(
+            "overviewTotalAnalyses",
+            Number(stats.total_analyses || 0).toLocaleString()
+        );
+        setText(
+            "overviewDetectedChanges",
+            Number(stats.completed_analyses || 0).toLocaleString()
+        );
+        setText(
+            "overviewLocations",
+            Number(stats.unique_locations || 0).toLocaleString()
+        );
+        setText(
+            "overviewModelF1",
+            stats.model_f1_percent === null ||
+            stats.model_f1_percent === undefined
+                ? "N/A"
+                : `${Number(stats.model_f1_percent).toFixed(2)}%`
+        );
+
+        const f1Card = document.getElementById("overviewModelF1");
+        if (f1Card) {
+            f1Card.title = stats.model_f1_context || "";
+        }
+    } catch (error) {
+        console.error("Failed to load dashboard statistics:", error);
+        setText("overviewTotalAnalyses", "N/A");
+        setText("overviewDetectedChanges", "N/A");
+        setText("overviewLocations", "N/A");
+        setText("overviewModelF1", "N/A");
+    }
+}
+
+
+// =====================================================
 // INITIALIZE THE APPLICATION
 // =====================================================
 
