@@ -246,3 +246,12 @@ async function analyzeLocation(selection) {
 async function getAnalysisHistory() {
     return await apiRequest("/api/analysis-history");
 }
+
+
+// =====================================================
+// GET AUTHENTICATED DASHBOARD STATISTICS
+// =====================================================
+
+async function getDashboardStatistics() {
+    return await apiRequest("/api/dashboard-stats");
+}
