@@ -10,7 +10,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from PIL import Image
 from pydantic import BaseModel, Field
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from tensorflow.keras.models import load_model
@@ -326,6 +326,79 @@ def get_analysis_history(
         raise HTTPException(
             status_code=500,
             detail="Failed to retrieve analysis history.",
+        )
+
+
+# =========================================================
+# AUTHENTICATED DASHBOARD STATISTICS
+# =========================================================
+
+@app.get("/api/dashboard-stats")
+def get_dashboard_statistics(
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Return dashboard metrics scoped to the authenticated user."""
+
+    try:
+        user_filter = AnalysisHistory.user_id == current_user.id
+
+        total_analyses = db.scalar(
+            select(func.count(AnalysisHistory.id)).where(user_filter)
+        ) or 0
+
+        completed_filter = (
+            user_filter
+            & AnalysisHistory.status.like("Completed%")
+        )
+
+        completed_analyses = db.scalar(
+            select(func.count(AnalysisHistory.id)).where(completed_filter)
+        ) or 0
+
+        completed_locations = db.execute(
+            select(
+                AnalysisHistory.latitude,
+                AnalysisHistory.longitude,
+            )
+            .where(completed_filter)
+            .distinct()
+        ).all()
+
+        # Round coordinates to five decimal places to avoid treating
+        # insignificant floating-point differences as separate locations.
+        unique_locations = {
+            (round(latitude, 5), round(longitude, 5))
+            for latitude, longitude in completed_locations
+        }
+
+        try:
+            metadata = load_model_metadata()
+            evaluation = metadata.get("evaluation", {})
+            dataset = metadata.get("dataset", {})
+            model_f1_percent = evaluation.get("test_f1_percent")
+            model_f1_dataset = dataset.get("name")
+        except (FileNotFoundError, json.JSONDecodeError, AttributeError):
+            model_f1_percent = None
+            model_f1_dataset = None
+
+        return {
+            "total_analyses": int(total_analyses),
+            "completed_analyses": int(completed_analyses),
+            "unique_locations": len(unique_locations),
+            "model_f1_percent": model_f1_percent,
+            "model_f1_dataset": model_f1_dataset,
+            "model_f1_context": (
+                "LEVIR-CD test-set metric; not validated on Sentinel-2."
+                if model_f1_percent is not None
+                else "Model evaluation metric unavailable."
+            ),
+        }
+
+    except SQLAlchemyError:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve dashboard statistics.",
         )
 
 
